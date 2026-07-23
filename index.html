@@ -745,7 +745,6 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
       <input type="hidden" name="service" id="hidService">
       <input type="hidden" name="options" id="hidOptions">
       <input type="hidden" name="total" id="hidTotal">
-      <input type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">
 
       <div class="step-label reveal">01 — Select the service</div>
       <div class="pick-grid reveal" id="pickGrid"></div>
@@ -762,6 +761,8 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <div class="field"><label for="demo">Demo / reference link (optional)</label><input id="demo" type="url" name="demo_link" placeholder="Dropbox, Drive, SoundCloud or Spotify link"></div>
         <div class="field" style="margin-bottom:0"><label for="h-message">About the project</label><textarea id="h-message" name="message" placeholder="Genre, reference tracks, deadline, and anything we should know before we start." required></textarea></div>
       </div>
+
+      <div class="h-captcha" data-captcha="true" data-theme="dark" style="margin:18px 0"></div>
 
       <div class="total-bar reveal">
         <div>
@@ -1045,7 +1046,13 @@ function update(instant){
 select('production');
 
 // submit feedback
-document.getElementById('hireForm').addEventListener('submit', () => {
+document.getElementById('hireForm').addEventListener('submit', (e) => {
+  const hCaptcha = document.querySelector('textarea[name=h-captcha-response]');
+  if (!hCaptcha || !hCaptcha.value) {
+    e.preventDefault();
+    alert('Please confirm the "I am human" check before sending.');
+    return;
+  }
   setTimeout(() => { document.getElementById('sentMsg').style.display = 'block'; }, 400);
 });
 
@@ -1131,5 +1138,6 @@ if (location.hash.startsWith('#hire')){
 }
 
 </script>
+<script src="https://web3forms.com/client/script.js" async defer></script>
 </body>
 </html>
