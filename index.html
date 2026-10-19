@@ -443,6 +443,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 #view-hire .field input::placeholder,#view-hire .field textarea::placeholder{color:#8c8270}
 #view-hire .field input:focus,#view-hire .field textarea:focus{border-color:var(--accent);background:#faf6ee}
 /* total pop */
+.cur-note{font-size:.76rem;color:var(--text-mute);margin-top:6px}
 .tv.pop{animation:tpop .38s var(--ease)}
 @keyframes tpop{30%{transform:scale(1.1);color:var(--accent-2)}}
 .conf{border:1px solid var(--border);border-radius:18px;background:linear-gradient(135deg,var(--surface-2),var(--surface));padding:34px;margin-top:8px}
@@ -767,7 +768,8 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
       <div class="total-bar reveal">
         <div>
           <div class="tl">Total</div>
-          <div class="tv">$<span id="totalVal">0</span> <small id="totalUnit">/ track</small></div>
+          <div class="tv"><span id="totalVal">$0</span> <small id="totalUnit">/ track</small></div>
+          <div class="cur-note" id="curNote" hidden></div>
         </div>
         <button type="submit" class="pill solid btn-lg">Request booking</button>
       </div>
@@ -916,6 +918,62 @@ const cio = new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){
 document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
 
 /* ============================================================
+   LOCAL CURRENCY — prices are set in USD below; visitors see them
+   converted to their local currency. Detection: Cloudflare edge
+   (/cdn-cgi/trace), then ipapi.co, then the browser time zone.
+   Rates: open.er-api.com, cached 12h. Any failure = USD.
+   ============================================================ */
+const CUR_BY_COUNTRY = {IL:'ILS',GB:'GBP',CA:'CAD',AU:'AUD',NZ:'NZD',CH:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',PL:'PLN',CZ:'CZK',HU:'HUF',RO:'RON',TR:'TRY',JP:'JPY',KR:'KRW',IN:'INR',BR:'BRL',MX:'MXN',AR:'ARS',ZA:'ZAR',AE:'AED',SG:'SGD',HK:'HKD',
+  DE:'EUR',FR:'EUR',NL:'EUR',BE:'EUR',ES:'EUR',IT:'EUR',PT:'EUR',IE:'EUR',AT:'EUR',FI:'EUR',GR:'EUR',LU:'EUR',SK:'EUR',SI:'EUR',EE:'EUR',LV:'EUR',LT:'EUR',HR:'EUR',CY:'EUR',MT:'EUR'};
+const TZ_COUNTRY = {'Asia/Jerusalem':'IL','Asia/Tel_Aviv':'IL','Europe/London':'GB','Europe/Berlin':'DE','Europe/Paris':'FR','Europe/Amsterdam':'NL','Europe/Madrid':'ES','Europe/Rome':'IT','Europe/Zurich':'CH','Australia/Sydney':'AU','Australia/Melbourne':'AU','America/Toronto':'CA','America/Vancouver':'CA','Asia/Tokyo':'JP','America/Sao_Paulo':'BR','America/Mexico_City':'MX','Asia/Kolkata':'IN'};
+const CUR = { code:'USD', rate:1, country:'US', fmt:new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}) };
+
+function niceRound(v){
+  const step = v < 100 ? 1 : v < 1000 ? 5 : v < 10000 ? 10 : v < 100000 ? 100 : 1000;
+  return Math.round(v / step) * step;
+}
+function toLocal(usd){ return usd ? niceRound(usd * CUR.rate) : 0; }
+function money(usd){ return CUR.fmt.format(toLocal(usd)); }
+function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+async function detectCountry(){
+  try {
+    const r = await fetch('/cdn-cgi/trace', {cache:'no-store'});
+    if (r.ok){ const m = (await r.text()).match(/^loc=([A-Z]{2})$/m); if (m && m[1] !== 'XX') return m[1]; }
+  } catch(e){}
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok){ const d = await r.json(); if (d.country_code) return d.country_code; }
+  } catch(e){}
+  try { return TZ_COUNTRY[Intl.DateTimeFormat().resolvedOptions().timeZone] || null; } catch(e){ return null; }
+}
+async function getRates(){
+  const cached = lsGet('evx_rates');
+  if (cached && Date.now() - cached.t < 12*3600*1000) return cached.rates;
+  const r = await fetch('https://open.er-api.com/v6/latest/USD');
+  const d = await r.json();
+  if (d.result !== 'success') throw 0;
+  lsSet('evx_rates', {t:Date.now(), rates:d.rates});
+  return d.rates;
+}
+async function initCurrency(){
+  try {
+    const country = await detectCountry();
+    const code = CUR_BY_COUNTRY[country];
+    if (!code) return;
+    const rates = await getRates();
+    if (!rates[code]) return;
+    CUR.code = code; CUR.rate = rates[code]; CUR.country = country;
+    CUR.fmt = new Intl.NumberFormat(navigator.language || 'en-US', {style:'currency', currency:code, maximumFractionDigits:0});
+    const note = document.getElementById('curNote');
+    note.textContent = 'Approximate in ' + code + '. Projects are invoiced in USD.';
+    note.hidden = false;
+    renderConf();
+  } catch(e){}
+}
+
+/* ============================================================
    PRICING CONFIG — edit everything money-related here.
    base: price per track. options: groups of radio/checkbox rows.
    type 'radio' = pick one. type 'check' = pick any. price in USD.
@@ -999,8 +1057,8 @@ function renderConf(){
       const t = g.type === 'radio' ? 'radio' : 'checkbox';
       const chk = (g.type === 'radio' && (it.def || ii === 0)) ? 'checked' : '';
       const pr = it.was
-        ? '<span class="op-was">$' + it.was + '</span><span class="op">+$' + it.price + '</span>'
-        : (it.price > 0 ? '<span class="op">+$' + it.price + '</span>' : '<span class="op free">included</span>');
+        ? '<span class="op-was">' + money(it.was) + '</span><span class="op">+' + money(it.price) + '</span>'
+        : (it.price > 0 ? '<span class="op">+' + money(it.price) + '</span>' : '<span class="op free">included</span>');
       html += '<label class="opt' + (chk ? ' sel' : '') + '"><input type="' + t + '" name="g' + gi + '" data-price="' + it.price + '" data-label="' + it.label + '" ' + chk + '><span class="ol">' + it.label + '</span>' + pr + '</label>';
     });
     html += '</div>';
@@ -1021,29 +1079,31 @@ function animateTotal(to){
   tv.classList.remove('pop'); void tv.offsetWidth; tv.classList.add('pop');
   (function step(t){
     const p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(from + d * e);
+    el.textContent = CUR.fmt.format(Math.round(from + d * e));
     if (p < 1) tween = requestAnimationFrame(step); else shownTotal = to;
   })(t0);
 }
 
 function update(instant){
   const s = SERVICES[current];
-  let total = s.base;
+  let total = s.base, localTotal = toLocal(s.base);
   const chosen = [];
   confPanel.querySelectorAll('input:checked').forEach(i => {
     total += +i.dataset.price;
+    localTotal += toLocal(+i.dataset.price);
     chosen.push(i.dataset.label + (+i.dataset.price > 0 ? ' (+$' + i.dataset.price + ')' : ''));
   });
   confPanel.querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o.querySelector('input').checked));
-  if (instant === true){ shownTotal = total; document.getElementById('totalVal').textContent = total; }
-  else animateTotal(total);
+  if (instant === true){ shownTotal = localTotal; document.getElementById('totalVal').textContent = CUR.fmt.format(localTotal); }
+  else animateTotal(localTotal);
   document.getElementById('totalUnit').textContent = s.unit;
   document.getElementById('hidService').value = s.name;
   document.getElementById('hidOptions').value = chosen.join(' | ') || 'None';
-  document.getElementById('hidTotal').value = '$' + total + ' ' + s.unit;
+  document.getElementById('hidTotal').value = '$' + total + ' USD ' + s.unit + (CUR.code !== 'USD' ? ' (shown to client as ' + CUR.fmt.format(localTotal) + ', ' + CUR.country + ')' : '');
 }
 
 select('production');
+initCurrency();
 
 // submit feedback
 document.getElementById('hireForm').addEventListener('submit', (e) => {
