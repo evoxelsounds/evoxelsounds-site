@@ -594,6 +594,10 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 }
 @media(prefers-reduced-motion:reduce){.abp *{transition:none!important}}
 
+.abp-intro{margin:0 0 28px}
+.abp-eyebrow{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 10px}
+.abp-h{font-family:var(--display);font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:clamp(1.9rem,5vw,3rem);line-height:1;margin:0;color:var(--text);text-wrap:balance}
+.abp-lead{color:var(--dim);max-width:58ch;margin:14px 0 0;font-size:1.02rem;line-height:1.55}
 .abp-label{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-mute);font-weight:600;margin:0 0 14px}
 .abp-rel{margin-top:56px}
 </style>
@@ -701,7 +705,11 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     <div class="ghost-head reveal"><div class="ghost">Releases</div><div class="real">Portfolio</div></div>
 
     <div class="abp reveal">
-      <p class="abp-label">Before &amp; After</p>
+      <div class="abp-intro">
+        <p class="abp-eyebrow">Before &amp; After</p>
+        <h3 class="abp-h">Hear the difference</h3>
+        <p class="abp-lead">Switch between the original and the finished master while the track plays. Both versions stay locked in time, so you hear the same moment either way.</p>
+      </div>
       <div class="abp-player" role="region" aria-label="Before and after player">
     <div class="abp-top">
       <div class="abp-track">
