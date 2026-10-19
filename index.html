@@ -532,6 +532,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .abp-tnum{flex:none;font:700 .72rem var(--display);letter-spacing:.14em;color:var(--mute);font-variant-numeric:tabular-nums}
 .abp-tname{min-width:0;font-weight:600;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abp-tartist{color:var(--dim);font-weight:500}
+.abp-tartist::after{content:" – "}
 .abp-tgenre{flex:none;margin-left:auto;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
 .abp-tchev{position:absolute;right:15px;top:50%;width:7px;height:7px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .abp-tsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
@@ -585,13 +586,44 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .abp-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.95rem;color:var(--dim);border-top:1px solid var(--line);padding-top:16px}
 .abp kbd{font:600 .72rem var(--body);border:1px solid var(--line-2);border-radius:5px;padding:1px 5px;color:var(--dim)}
 
-@media(max-width:560px){
-  .abp-player{padding:18px;border-radius:16px}
-  .abp-play{width:54px;height:54px}
-  .abp-play-wrap{width:62px;height:62px}
-  .abp-tgenre{font-size:.64rem;letter-spacing:.04em}
-  .abp-tsel{gap:8px}
-  .abp-wave{height:52px}
+/* keep every row inside the card at any width (no visual change on desktop) */
+.abp-player{grid-template-columns:minmax(0,1fr)}
+.abp-player > *, .abp-top > *{min-width:0}
+
+/* ---- mobile layout ---- */
+@media(max-width:640px){
+  .abp-intro{margin-bottom:22px}
+  .abp-lead{font-size:.95rem}
+  .abp-player{padding:16px;border-radius:16px;gap:16px}
+
+  /* track bar + mute icon on one row; slider hidden (phones use hardware volume) */
+  .abp-top{gap:8px}
+  .abp-vol input[type=range]{display:none}
+  .abp-vol{gap:0}
+  .abp-icon-btn{padding:8px}
+  .abp-nav{width:36px}
+
+  /* two-line title: number + genre above, artist – title below */
+  .abp-tsel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"num genre" "name name";column-gap:8px;row-gap:3px;padding:8px 30px 8px 12px;align-items:center}
+  .abp-tnum{grid-area:num;font-size:.64rem}
+  .abp-tgenre{grid-area:genre;margin-left:0;font-size:.62rem;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis}
+  .abp-tname{grid-area:name;font-size:.92rem;font-weight:600;display:flex;flex-direction:column-reverse;line-height:1.25;white-space:normal}
+  .abp-tartist{font-size:.74rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .abp-tartist::after{content:none}
+  .abp-tchev{right:12px}
+
+  .abp-ab{gap:10px}
+  .abp-ab button{padding:12px 10px}
+  .abp-ab .abp-big{font-size:.95rem}
+
+  .abp-transport{gap:12px}
+  .abp-play-wrap{width:58px;height:58px}
+  .abp-play{width:48px;height:48px}
+  .abp-play svg{width:19px;height:19px}
+  .abp-wave{height:48px}
+  .abp-times{font-size:.75rem}
+
+  .abp-foot{font-size:.84rem;line-height:1.45;padding-top:14px}
 }
 @media(prefers-reduced-motion:reduce){.abp *{transition:none!important}}
 
@@ -1681,7 +1713,7 @@ function syncHeader(i){
   const pad = n => String(n).padStart(2,'0');
   $('abp-tNum').textContent = pad(i + 1) + ' / ' + pad(TRACKS.length);
   const tn = $('abp-tName'); tn.textContent = '';
-  const ar = document.createElement('span'); ar.className = 'abp-tartist'; ar.textContent = TRACKS[i].artist + ' – ';
+  const ar = document.createElement('span'); ar.className = 'abp-tartist'; ar.textContent = TRACKS[i].artist;
   tn.append(ar, TRACKS[i].title);
   $('abp-tGenre').textContent = TRACKS[i].genre || '';
   sel.value = i;
