@@ -509,7 +509,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   --line:rgba(230,180,120,.12); --line-2:rgba(230,180,120,.26);
   --text:#f5efe6; --dim:#b3a999; --mute:#7a7060;
   --accent:#e6a23c; --accent-2:#f3c87a; --accent-ink:#130d04;
-  --wave-off:rgba(245,239,230,.16); --wave-on:#e6a23c;
+  --wave-off:rgba(245,239,230,.38); --wave-on:#e6a23c;
   --display:"Archivo",system-ui,sans-serif;
   --body:"Hanken Grotesk",system-ui,sans-serif;
   --ease:cubic-bezier(.22,.61,.36,1);
@@ -1543,8 +1543,8 @@ function draw(pos){
   const dpr = window.devicePixelRatio || 1, w = wave.clientWidth, h = wave.clientHeight;
   if (cv.width !== w*dpr || cv.height !== h*dpr){ cv.width = w*dpr; cv.height = h*dpr; }
   const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
-  const css = getComputedStyle(document.documentElement);
-  const on = css.getPropertyValue('--wave-on').trim(), off = css.getPropertyValue('--wave-off').trim();
+  const css = getComputedStyle(wave);
+  const on = css.getPropertyValue('--wave-on').trim() || '#e6a23c', off = css.getPropertyValue('--wave-off').trim() || 'rgba(245,239,230,.38)';
   const p = duration ? pos / duration : 0;
   if (peaks){
     const n = peaks.length, bw = w / n, gap = Math.max(1, bw * .35);
