@@ -514,7 +514,6 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   --body:"Hanken Grotesk",system-ui,sans-serif;
   --ease:cubic-bezier(.22,.61,.36,1);
 }
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:56px 72px}
 
 
 .abp-player{margin-top:0;background:linear-gradient(160deg,var(--surface-2),var(--surface));border:1px solid var(--line);border-radius:20px;padding:26px;display:grid;gap:22px}
@@ -703,7 +702,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 
     <div class="abp reveal">
       <p class="abp-label">Before &amp; After</p>
-      <section class="abp-player" aria-label="Before and after player">
+      <div class="abp-player" role="region" aria-label="Before and after player">
     <div class="abp-top">
       <div class="abp-track">
         <button class="abp-nav" id="abp-prevBtn" aria-label="Previous track"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -754,7 +753,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     <div class="abp-foot">
       <span>The unmastered version is gain matched, so you judge the sound, not the volume.</span>
     </div>
-  </section>
+  </div>
     </div>
 
     <div class="abp-rel">
