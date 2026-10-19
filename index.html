@@ -923,8 +923,13 @@ document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
    (/cdn-cgi/trace), then ipapi.co, then the browser time zone.
    Rates: open.er-api.com, cached 12h. Any failure = USD.
    ============================================================ */
-const CUR_BY_COUNTRY = {IL:'ILS',GB:'GBP',CA:'CAD',AU:'AUD',NZ:'NZD',CH:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',PL:'PLN',CZ:'CZK',HU:'HUF',RO:'RON',TR:'TRY',JP:'JPY',KR:'KRW',IN:'INR',BR:'BRL',MX:'MXN',AR:'ARS',ZA:'ZAR',AE:'AED',SG:'SGD',HK:'HKD',
-  DE:'EUR',FR:'EUR',NL:'EUR',BE:'EUR',ES:'EUR',IT:'EUR',PT:'EUR',IE:'EUR',AT:'EUR',FI:'EUR',GR:'EUR',LU:'EUR',SK:'EUR',SI:'EUR',EE:'EUR',LV:'EUR',LT:'EUR',HR:'EUR',CY:'EUR',MT:'EUR'};
+const CUR_BY_COUNTRY = {
+  US:'USD',PR:'USD',EC:'USD',SV:'USD',PA:'USD',
+  IL:'ILS',GB:'GBP',CA:'CAD',AU:'AUD',NZ:'NZD',CH:'CHF',LI:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',IS:'ISK',PL:'PLN',CZ:'CZK',HU:'HUF',RO:'RON',BG:'BGN',RS:'RSD',UA:'UAH',TR:'TRY',
+  DE:'EUR',FR:'EUR',NL:'EUR',BE:'EUR',ES:'EUR',IT:'EUR',PT:'EUR',IE:'EUR',AT:'EUR',FI:'EUR',GR:'EUR',LU:'EUR',SK:'EUR',SI:'EUR',EE:'EUR',LV:'EUR',LT:'EUR',HR:'EUR',CY:'EUR',MT:'EUR',MC:'EUR',AD:'EUR',SM:'EUR',ME:'EUR',XK:'EUR',
+  JP:'JPY',KR:'KRW',CN:'CNY',HK:'HKD',TW:'TWD',SG:'SGD',MY:'MYR',TH:'THB',ID:'IDR',PH:'PHP',VN:'VND',IN:'INR',PK:'PKR',
+  AE:'AED',SA:'SAR',QA:'QAR',KW:'KWD',EG:'EGP',MA:'MAD',ZA:'ZAR',NG:'NGN',KE:'KES',
+  BR:'BRL',MX:'MXN',AR:'ARS',CL:'CLP',CO:'COP',PE:'PEN',UY:'UYU'};
 const TZ_COUNTRY = {'Asia/Jerusalem':'IL','Asia/Tel_Aviv':'IL','Europe/London':'GB','Europe/Berlin':'DE','Europe/Paris':'FR','Europe/Amsterdam':'NL','Europe/Madrid':'ES','Europe/Rome':'IT','Europe/Zurich':'CH','Australia/Sydney':'AU','Australia/Melbourne':'AU','America/Toronto':'CA','America/Vancouver':'CA','Asia/Tokyo':'JP','America/Sao_Paulo':'BR','America/Mexico_City':'MX','Asia/Kolkata':'IN'};
 const CUR = { code:'USD', rate:1, country:'US', fmt:new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}) };
 
@@ -937,21 +942,38 @@ function money(usd){ return CUR.fmt.format(toLocal(usd)); }
 function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
 function lsSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
+function fetchT(url, ms){
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms || 3500);
+  return fetch(url, {signal:c.signal, cache:'no-store'}).finally(() => clearTimeout(t));
+}
 async function detectCountry(){
+  // 1) Cloudflare edge (only if the site is ever served through Cloudflare)
   try {
-    const r = await fetch('/cdn-cgi/trace', {cache:'no-store'});
+    const r = await fetchT('/cdn-cgi/trace', 1500);
     if (r.ok){ const m = (await r.text()).match(/^loc=([A-Z]{2})$/m); if (m && m[1] !== 'XX') return m[1]; }
   } catch(e){}
-  try {
-    const r = await fetch('https://ipapi.co/json/');
-    if (r.ok){ const d = await r.json(); if (d.country_code) return d.country_code; }
-  } catch(e){}
+  // 2) IP lookups: the visitor's real network location (VPN included)
+  const lookups = [
+    ['https://api.country.is/',                     d => d.country],
+    ['https://get.geojs.io/v1/ip/country.json',     d => d.country],
+    ['https://ipwho.is/?fields=country_code',       d => d.country_code],
+    ['https://ipapi.co/json/',                      d => d.country_code],
+  ];
+  for (const [url, pick] of lookups){
+    try {
+      const r = await fetchT(url);
+      if (!r.ok) continue;
+      const cc = pick(await r.json());
+      if (cc && /^[A-Z]{2}$/.test(cc)) return cc;
+    } catch(e){}
+  }
+  // 3) last resort: the device's time zone
   try { return TZ_COUNTRY[Intl.DateTimeFormat().resolvedOptions().timeZone] || null; } catch(e){ return null; }
 }
 async function getRates(){
   const cached = lsGet('evx_rates');
   if (cached && Date.now() - cached.t < 12*3600*1000) return cached.rates;
-  const r = await fetch('https://open.er-api.com/v6/latest/USD');
+  const r = await fetchT('https://open.er-api.com/v6/latest/USD', 5000);
   const d = await r.json();
   if (d.result !== 'success') throw 0;
   lsSet('evx_rates', {t:Date.now(), rates:d.rates});
@@ -961,13 +983,14 @@ async function initCurrency(){
   try {
     const country = await detectCountry();
     const code = CUR_BY_COUNTRY[country];
-    if (!code) return;
+    if (!code || code === 'USD') return;
     const rates = await getRates();
     if (!rates[code]) return;
     CUR.code = code; CUR.rate = rates[code]; CUR.country = country;
     CUR.fmt = new Intl.NumberFormat(navigator.language || 'en-US', {style:'currency', currency:code, maximumFractionDigits:0});
     const note = document.getElementById('curNote');
-    note.textContent = 'Approximate in ' + code + '. Projects are invoiced in USD.';
+    const sym = (CUR.fmt.formatToParts(0).find(p => p.type === 'currency') || {}).value || '';
+    note.textContent = 'Approximate in ' + code + (sym && sym !== code ? ' (' + sym + ')' : '') + '. Projects are invoiced in USD.';
     note.hidden = false;
     renderConf();
   } catch(e){}
