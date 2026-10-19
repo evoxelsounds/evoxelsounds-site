@@ -531,6 +531,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .abp-tsel{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 38px 10px 14px}
 .abp-tnum{flex:none;font:700 .72rem var(--display);letter-spacing:.14em;color:var(--mute);font-variant-numeric:tabular-nums}
 .abp-tname{min-width:0;font-weight:600;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abp-tartist{color:var(--dim);font-weight:500}
 .abp-tgenre{flex:none;margin-left:auto;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
 .abp-tchev{position:absolute;right:15px;top:50%;width:7px;height:7px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .abp-tsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
@@ -1399,16 +1400,16 @@ if (location.hash.startsWith('#hire')){
    Entries without files show in the list as "coming soon".
    ============================================================ */
 const TRACKS = [
-  { title:'Tarsis',                  genre:'EDM / Psytrance', before:'audio/tarsis-before.wav',          after:'audio/tarsis-after.wav' },
-  { title:'Opia',                    genre:'EDM / Psytrance', before:'audio/opia-before.wav',            after:'audio/opia-after.wav' },
-  { title:'Hold Back',               genre:'EDM' },
-  { title:'Orion',                   genre:'EDM / Trance' },
-  { title:'Down To The Beat',        genre:'EDM' },
-  { title:'Bakari',                  genre:'EDM' },
-  { title:'Sound Machine',           genre:'EDM / Techno',    before:'audio/sound-machine-before.wav',   after:'audio/sound-machine-after.wav' },
-  { title:'The Siegemaster',         genre:'Film Score',      before:'audio/siegemaster-before.wav',     after:'audio/siegemaster-after.wav' },
-  { title:'Prologue of War',         genre:'Film Score',      before:'audio/prologue-of-war-before.wav', after:'audio/prologue-of-war-after.wav' },
-  { title:'Vaelwyn The Tempestuous', genre:'Film Score',      before:'audio/vaelwyn-before.wav',         after:'audio/vaelwyn-after.wav' },
+  { artist:'WH1TEN0ISE, Bubble', title:'Tarsis',                  genre:'EDM / Psytrance', before:'audio/tarsis-before.wav',          after:'audio/tarsis-after.wav' },
+  { artist:'Bubble', title:'Opia',                    genre:'EDM / Psytrance', before:'audio/opia-before.wav',            after:'audio/opia-after.wav' },
+  { artist:'Evoxel, Zanberg', title:'Hold Back',               genre:'EDM' },
+  { artist:'Evoxel', title:'Orion',                   genre:'EDM / Trance' },
+  { artist:'Evoxel, Amiel Adany', title:'Down To The Beat',        genre:'EDM' },
+  { artist:'Evoxel, Ovadia', title:'Bakari',                  genre:'EDM' },
+  { artist:'Zanberg', title:'Sound Machine',           genre:'EDM / Techno',    before:'audio/sound-machine-before.wav',   after:'audio/sound-machine-after.wav' },
+  { artist:'Joschinski', title:'The Siegemaster',         genre:'Film Score',      before:'audio/siegemaster-before.wav',     after:'audio/siegemaster-after.wav' },
+  { artist:'Joschinski', title:'Prologue of War',         genre:'Film Score',      before:'audio/prologue-of-war-before.wav', after:'audio/prologue-of-war-after.wav' },
+  { artist:'Joschinski', title:'Vaelwyn The Tempestuous', genre:'Film Score',      before:'audio/vaelwyn-before.wav',         after:'audio/vaelwyn-after.wav' },
 ];
 
 const $ = id => document.getElementById(id);
@@ -1418,7 +1419,7 @@ const sel = $('abp-trackSel'), playBtn = $('abp-playBtn'), playIcon = $('abp-pla
 
 TRACKS.forEach((t,i) => {
   const o = document.createElement('option');
-  o.value = i; o.textContent = t.title + ' — ' + t.genre + (t.before ? '' : ' (coming soon)'); o.disabled = !t.before;
+  o.value = i; o.textContent = t.artist + ' – ' + t.title + '  ·  ' + t.genre + (t.before ? '' : ' (coming soon)'); o.disabled = !t.before;
   sel.appendChild(o);
 });
 
@@ -1679,7 +1680,9 @@ const ready = TRACKS.map((t,i) => t.before ? i : -1).filter(i => i >= 0);
 function syncHeader(i){
   const pad = n => String(n).padStart(2,'0');
   $('abp-tNum').textContent = pad(i + 1) + ' / ' + pad(TRACKS.length);
-  $('abp-tName').textContent = TRACKS[i].title;
+  const tn = $('abp-tName'); tn.textContent = '';
+  const ar = document.createElement('span'); ar.className = 'abp-tartist'; ar.textContent = TRACKS[i].artist + ' – ';
+  tn.append(ar, TRACKS[i].title);
   $('abp-tGenre').textContent = TRACKS[i].genre || '';
   sel.value = i;
   const k = ready.indexOf(i);
