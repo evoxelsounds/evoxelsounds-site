@@ -1518,6 +1518,7 @@ async function loadTrack(i){
     const v = await getDecoded(i);
     if (token !== loadToken) return;
     ({ b:bufB, a:bufA, peaks } = v);
+    morph = side === 'after' ? 1 : 0;
     duration = Math.min(bufB.duration, bufA.duration);
     tDur.textContent = fmt(duration);
     wave.setAttribute('aria-valuemax', Math.round(duration));
@@ -1535,16 +1536,34 @@ async function loadTrack(i){
 }
 
 function computePeaks(a, b){
-  const N = 320, out = new Float32Array(N), chans = [];
-  for (const buf of [a, b]) for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
-  const len = Math.min(a.length, b.length), step = Math.floor(len / N);
-  for (let i = 0; i < N; i++){
-    let m = 0;
-    for (const d of chans) for (let j = i*step, e = j + step; j < e; j += 16){ const v = Math.abs(d[j]); if (v > m) m = v; }
-    out[i] = m;
-  }
-  const max = Math.max(...out) || 1;
-  return out.map(v => v / max);
+  // separate RMS envelopes per version on one shared scale, so the real
+  // difference in density and level shows when switching
+  const N = 320;
+  const env = buf => {
+    const chans = []; for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+    const len = Math.min(a.length, b.length), step = Math.floor(len / N), out = new Float32Array(N);
+    for (let i = 0; i < N; i++){
+      let sum = 0, cnt = 0;
+      for (const d of chans) for (let j = i*step, e = j + step; j < e; j += 8){ sum += d[j]*d[j]; cnt++; }
+      out[i] = Math.sqrt(sum / (cnt || 1));
+    }
+    return out;
+  };
+  const pa = env(a), pb = env(b);
+  let max = 0; for (let i = 0; i < N; i++) max = Math.max(max, pa[i], pb[i]);
+  max = max || 1;
+  return { a: pa.map(v => v / max), b: pb.map(v => v / max) };
+}
+let morph = 1, morphRaf = 0;   // 0 = before shape, 1 = after shape
+function animateMorph(){
+  cancelAnimationFrame(morphRaf);
+  const target = side === 'after' ? 1 : 0, from = morph, t0 = performance.now(), dur = 260;
+  (function tick(t){
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    morph = from + (target - from) * e;
+    if (!playing) draw(position());
+    if (k < 1) morphRaf = requestAnimationFrame(tick);
+  })(t0);
 }
 
 function draw(pos){
@@ -1555,9 +1574,10 @@ function draw(pos){
   const on = css.getPropertyValue('--wave-on').trim() || '#e6a23c', off = css.getPropertyValue('--wave-off').trim() || 'rgba(245,239,230,.38)';
   const p = duration ? pos / duration : 0;
   if (peaks){
-    const n = peaks.length, bw = w / n, gap = Math.max(1, bw * .35);
+    const n = peaks.a.length, bw = w / n, gap = Math.max(1, bw * .35);
     for (let i = 0; i < n; i++){
-      const bh = Math.max(2, peaks[i] * (h - 4)), x = i * bw;
+      const v = peaks.b[i] + (peaks.a[i] - peaks.b[i]) * morph;
+      const bh = Math.max(2, v * (h - 4)), x = i * bw;
       g.fillStyle = (i + .5) / n <= p ? on : off;
       g.fillRect(x, (h - bh) / 2, Math.max(1, bw - gap), bh);
     }
@@ -1607,6 +1627,7 @@ function setSide(s){
   side = s;
   btnB.setAttribute('aria-pressed', s === 'before');
   btnA.setAttribute('aria-pressed', s === 'after');
+  animateMorph();
   if (!ctx) return;
   const now = ctx.currentTime;
   for (const [g, target] of [[gB, s === 'before' ? 1 : 0], [gA, s === 'after' ? 1 : 0]]){
