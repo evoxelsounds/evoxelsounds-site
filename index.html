@@ -947,6 +947,8 @@ function fetchT(url, ms){
   return fetch(url, {signal:c.signal, cache:'no-store'}).finally(() => clearTimeout(t));
 }
 async function detectCountry(){
+  // test override: add ?cc=ES (any 2-letter country) to the URL
+  try { const o = new URLSearchParams(location.search).get('cc'); if (o && /^[a-z]{2}$/i.test(o)) return o.toUpperCase(); } catch(e){}
   // 1) Cloudflare edge (only if the site is ever served through Cloudflare)
   try {
     const r = await fetchT('/cdn-cgi/trace', 1500);
@@ -983,6 +985,7 @@ async function initCurrency(){
   try {
     const country = await detectCountry();
     const code = CUR_BY_COUNTRY[country];
+    try { if (new URLSearchParams(location.search).has('curdebug')) alert('Detected country: ' + country + '\nCurrency: ' + (code || 'not mapped, USD')); } catch(e){}
     if (!code || code === 'USD') return;
     const rates = await getRates();
     if (!rates[code]) return;
