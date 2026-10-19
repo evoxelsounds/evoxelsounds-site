@@ -500,6 +500,103 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .curtain::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(0deg,rgba(138,79,217,.18),transparent)}
 .curtain.cover{transform:translateY(0);transition:transform .38s cubic-bezier(.7,0,.3,1)}
 .curtain.exit{transform:translateY(-102%);transition:transform .44s cubic-bezier(.7,0,.3,1)}
+
+/* ===== BEFORE / AFTER PLAYER ===== */
+.abp *{box-sizing:border-box}
+
+.abp{
+  --bg:#08070b; --surface:#141019; --surface-2:#1b1622; --well:#0c0a10;
+  --line:rgba(230,180,120,.12); --line-2:rgba(230,180,120,.26);
+  --text:#f5efe6; --dim:#b3a999; --mute:#7a7060;
+  --accent:#e6a23c; --accent-2:#f3c87a; --accent-ink:#130d04;
+  --wave-off:rgba(245,239,230,.16); --wave-on:#e6a23c;
+  --display:"Archivo",system-ui,sans-serif;
+  --body:"Hanken Grotesk",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:56px 72px}
+
+
+.abp-player{margin-top:0;background:linear-gradient(160deg,var(--surface-2),var(--surface));border:1px solid var(--line);border-radius:20px;padding:26px;display:grid;gap:22px}
+
+/* top row: track picker + volume */
+.abp-top{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.abp-track{display:flex;align-items:stretch;min-width:0;flex:1;background:var(--well);border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
+.abp-nav{flex:none;width:42px;background:none;border:none;color:var(--dim);cursor:pointer;display:grid;place-items:center;transition:color .2s,background .2s}
+.abp-nav:hover:not([disabled]){color:var(--accent);background:rgba(230,162,60,.06)}
+.abp-nav[disabled]{opacity:.3;cursor:default}
+.abp-nav:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.abp-nav svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.abp-nav:first-child{border-right:1px solid var(--line)}
+.abp-nav:last-child{border-left:1px solid var(--line)}
+.abp-tsel{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 38px 10px 14px}
+.abp-tnum{flex:none;font:700 .72rem var(--display);letter-spacing:.14em;color:var(--mute);font-variant-numeric:tabular-nums}
+.abp-tname{min-width:0;font-weight:600;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abp-tgenre{flex:none;margin-left:auto;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.abp-tchev{position:absolute;right:15px;top:50%;width:7px;height:7px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.abp-tsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.abp-tsel:has(select:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.abp-vol{display:flex;align-items:center;gap:8px}
+.abp-icon-btn{background:none;border:none;color:var(--dim);cursor:pointer;padding:6px;border-radius:8px;display:grid;place-items:center}
+.abp-icon-btn:hover{color:var(--text)}
+.abp-icon-btn:focus-visible{outline:2px solid var(--accent)}
+.abp-icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.abp input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--accent) var(--v,80%),rgba(245,239,230,.18) var(--v,80%));cursor:pointer}
+.abp input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--text);border:none}
+.abp input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--text);border:none}
+.abp input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+
+/* the A/B switch */
+.abp-ab{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.abp-ab button{position:relative;border:1px solid var(--line-2);background:var(--well);color:var(--dim);border-radius:12px;padding:13px 16px;cursor:pointer;text-align:center;
+  transition:background .25s var(--ease),color .25s,border-color .25s,box-shadow .3s,transform .2s var(--ease)}
+.abp-ab button:hover{border-color:var(--accent);color:var(--text)}
+.abp-ab button:active{transform:scale(.985)}
+.abp-ab button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.abp-ab .abp-big{display:block;font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:1.05rem;line-height:1;letter-spacing:.08em}
+.abp-ab .abp-sub{display:block;margin-top:8px;font-size:.84rem;color:var(--mute);transition:color .25s}
+.abp-ab .abp-key{position:absolute;top:14px;right:14px;font:600 .68rem var(--body);letter-spacing:.08em;color:var(--mute);border:1px solid var(--line-2);border-radius:6px;padding:2px 6px}
+.abp-ab button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 18px 44px -20px var(--accent)}
+.abp-ab button[aria-pressed=true] .abp-sub{color:rgba(19,13,4,.72)}
+.abp-ab button[aria-pressed=true] .abp-key{color:rgba(19,13,4,.6);border-color:rgba(19,13,4,.25)}
+.abp-badge{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:4px 9px;border-radius:100px;border:1px solid currentColor;opacity:.85}
+.abp-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* transport */
+.abp-transport{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.abp-play{width:62px;height:62px;border-radius:50%;border:none;background:var(--text);color:var(--bg);cursor:pointer;display:grid;place-items:center;transition:transform .2s var(--ease),background .2s}
+.abp-play:hover{transform:scale(1.05);background:#fff}
+.abp-play:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.abp-play svg{width:22px;height:22px;fill:currentColor}
+.abp-play-wrap{position:relative;width:70px;height:70px;display:grid;place-items:center}
+.abp-ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.abp-ring circle{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:207.3;stroke-dashoffset:207.3;opacity:0;transition:stroke-dashoffset .2s linear,opacity .3s}
+.abp-play-wrap.abp-loading .abp-ring circle{opacity:1}
+.abp-play-wrap.abp-loading .abp-play{background:rgba(245,239,230,.75)}
+.abp-timeline{min-width:0;display:grid;gap:8px}
+.abp-wave{position:relative;height:64px;cursor:pointer;touch-action:none;border-radius:8px}
+.abp-wave canvas{position:absolute;inset:0;width:100%;height:100%}
+.abp-wave .abp-head{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text);left:0;border-radius:2px;pointer-events:none;box-shadow:0 0 12px rgba(245,239,230,.4)}
+.abp-wave:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.abp-times{display:flex;justify-content:space-between;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.abp-times b{color:var(--text);font-weight:600}
+
+.abp-status{font-size:.84rem;color:var(--mute);min-height:1.3em}
+.abp-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.95rem;color:var(--dim);border-top:1px solid var(--line);padding-top:16px}
+.abp kbd{font:600 .72rem var(--body);border:1px solid var(--line-2);border-radius:5px;padding:1px 5px;color:var(--dim)}
+
+@media(max-width:560px){
+  .abp-player{padding:18px;border-radius:16px}
+  .abp-play{width:54px;height:54px}
+  .abp-play-wrap{width:62px;height:62px}
+  .abp-tgenre{font-size:.64rem;letter-spacing:.04em}
+  .abp-tsel{gap:8px}
+  .abp-wave{height:52px}
+}
+@media(prefers-reduced-motion:reduce){.abp *{transition:none!important}}
+
+.abp-label{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-mute);font-weight:600;margin:0 0 14px}
+.abp-rel{margin-top:56px}
 </style>
 </head>
 <body>
@@ -603,6 +700,65 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 <section id="work">
   <div class="container">
     <div class="ghost-head reveal"><div class="ghost">Releases</div><div class="real">Portfolio</div></div>
+
+    <div class="abp reveal">
+      <p class="abp-label">Before &amp; After</p>
+      <section class="abp-player" aria-label="Before and after player">
+    <div class="abp-top">
+      <div class="abp-track">
+        <button class="abp-nav" id="abp-prevBtn" aria-label="Previous track"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="abp-tsel">
+          <span class="abp-tnum" id="abp-tNum">01 / 04</span>
+          <span class="abp-tname" id="abp-tName">Track</span>
+          <span class="abp-tgenre" id="abp-tGenre"></span>
+          <span class="abp-tchev" aria-hidden="true"></span>
+          <select id="abp-trackSel" aria-label="Choose track"></select>
+        </div>
+        <button class="abp-nav" id="abp-nextBtn" aria-label="Next track"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="abp-vol">
+        <button class="abp-icon-btn" id="abp-muteBtn" aria-label="Mute">
+          <svg viewBox="0 0 24 24" id="abp-volIcon"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+        </button>
+        <input type="range" id="abp-vol" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
+      </div>
+    </div>
+
+    <div class="abp-ab" role="group" aria-label="Choose version">
+      <button id="abp-btnBefore" aria-pressed="false">
+        <span class="abp-big">Before</span>
+      </button>
+      <button id="abp-btnAfter" aria-pressed="true">
+        <span class="abp-big">After</span>
+      </button>
+    </div>
+
+    <div class="abp-transport">
+      <div class="abp-play-wrap" id="abp-playWrap">
+        <svg class="abp-ring" viewBox="0 0 70 70" aria-hidden="true"><circle cx="35" cy="35" r="33" id="abp-ring"/></svg>
+        <button class="abp-play" id="abp-playBtn" aria-label="Play">
+          <svg viewBox="0 0 24 24" id="abp-playIcon"><path d="M7 4.5v15l13-7.5z"/></svg>
+        </button>
+      </div>
+      <div class="abp-timeline">
+        <div class="abp-wave" id="abp-wave" tabindex="0" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0">
+          <canvas id="abp-cv"></canvas>
+          <div class="abp-head" id="abp-head"></div>
+        </div>
+        <div class="abp-times"><span><b id="abp-tCur">0:00</b></span><span id="abp-tDur">0:00</span></div>
+      </div>
+    </div>
+
+    <div class="abp-status" id="abp-status" aria-live="polite" hidden></div>
+
+    <div class="abp-foot">
+      <span>The unmastered version is gain matched, so you judge the sound, not the volume.</span>
+    </div>
+  </section>
+    </div>
+
+    <div class="abp-rel">
+    <p class="abp-label">Releases</p>
     <div class="track-grid reveal" id="trackGrid"></div>
 
     <div class="show-more reveal" style="transition-delay:.06s">
@@ -612,6 +768,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
           Show More
         </a>
       </div>
+    </div>
     </div>
   </div>
 </section>
@@ -1225,5 +1382,310 @@ if (location.hash.startsWith('#hire')){
 
 </script>
 <script src="https://web3forms.com/client/script.js" async defer></script>
+<script>
+/* ===== BEFORE / AFTER PLAYER ===== */
+(function(){
+
+/* ============================================================
+   TRACKS — add one entry per song. Files sit next to the page.
+   Before and after must be the same length and start together.
+   Entries without files show in the list as "coming soon".
+   ============================================================ */
+const TRACKS = [
+  { title:'Tarsis',                  genre:'EDM / Psytrance', before:'audio/tarsis-before.wav',          after:'audio/tarsis-after.wav' },
+  { title:'Opia',                    genre:'EDM / Psytrance', before:'audio/opia-before.wav',            after:'audio/opia-after.wav' },
+  { title:'Hold Back',               genre:'EDM' },
+  { title:'Orion',                   genre:'EDM / Trance' },
+  { title:'Down To The Beat',        genre:'EDM' },
+  { title:'Bakari',                  genre:'EDM' },
+  { title:'Sound Machine',           genre:'EDM / Techno',    before:'audio/sound-machine-before.wav',   after:'audio/sound-machine-after.wav' },
+  { title:'The Siegemaster',         genre:'Film Score',      before:'audio/siegemaster-before.wav',     after:'audio/siegemaster-after.wav' },
+  { title:'Prologue of War',         genre:'Film Score',      before:'audio/prologue-of-war-before.wav', after:'audio/prologue-of-war-after.wav' },
+  { title:'Vaelwyn The Tempestuous', genre:'Film Score',      before:'audio/vaelwyn-before.wav',         after:'audio/vaelwyn-after.wav' },
+];
+
+const $ = id => document.getElementById(id);
+const sel = $('abp-trackSel'), playBtn = $('abp-playBtn'), playIcon = $('abp-playIcon'),
+      btnB = $('abp-btnBefore'), btnA = $('abp-btnAfter'), vol = $('abp-vol'), muteBtn = $('abp-muteBtn'),
+      wave = $('abp-wave'), cv = $('abp-cv'), head = $('abp-head'), tCur = $('abp-tCur'), tDur = $('abp-tDur'), status = $('abp-status');
+
+TRACKS.forEach((t,i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = t.title + ' — ' + t.genre + (t.before ? '' : ' (coming soon)'); o.disabled = !t.before;
+  sel.appendChild(o);
+});
+
+let ctx, master, gB, gA;            // audio graph
+let bufB, bufA, peaks = null;       // current track
+let srcB, srcA;                     // live sources
+let side = 'after';                 // which version is audible
+let playing = false, startCtx = 0, startOff = 0, duration = 0, raf = 0, loadToken = 0;
+let current = -1, loadedIdx = -1, loading = false, wantPlay = false, lastDir = 1;
+const XF = 0.025;                   // crossfade seconds when switching
+
+/* ---------- smart loading ----------
+   1. Nothing downloads until the player is close to the screen (or Play is pressed).
+   2. Only the selected track downloads; a progress ring shows it on the Play button.
+   3. Once it is ready and the browser is idle, the next track in the browsing
+      direction is fetched quietly (skipped on data-saver or slow connections).
+   4. Up to 3 decoded tracks stay in memory; older ones are dropped and come back
+      from the browser cache if reopened.                                        */
+const raw = new Map();       // url -> Promise<ArrayBuffer>
+const prog = new Map();      // url -> 0..1
+const decoded = new Map();   // track index -> {b, a, peaks}
+const MAX_DECODED = 3;
+
+function fetchBytes(url){
+  if (raw.has(url)) return raw.get(url);
+  const p = (async () => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(url);
+    const total = +r.headers.get('content-length') || 0;
+    if (!r.body || !total){ const ab = await r.arrayBuffer(); prog.set(url, 1); return ab; }
+    const reader = r.body.getReader(), chunks = []; let got = 0;
+    for (;;){
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); got += value.length; prog.set(url, Math.min(1, got / total));
+    }
+    const out = new Uint8Array(got); let o = 0;
+    for (const c of chunks){ out.set(c, o); o += c.length; }
+    prog.set(url, 1);
+    return out.buffer;
+  })();
+  prog.set(url, prog.get(url) || 0);
+  p.catch(() => { raw.delete(url); prog.delete(url); });
+  raw.set(url, p);
+  return p;
+}
+
+async function getDecoded(i){
+  if (decoded.has(i)){ const v = decoded.get(i); decoded.delete(i); decoded.set(i, v); return v; }
+  ensureCtx();
+  const t = TRACKS[i];
+  const [rb, ra] = await Promise.all([fetchBytes(t.before), fetchBytes(t.after)]);
+  const [b, a] = await Promise.all([ctx.decodeAudioData(rb.slice(0)), ctx.decodeAudioData(ra.slice(0))]);
+  raw.delete(t.before); raw.delete(t.after);          // decoded copy is kept; free the raw bytes
+  const v = { b, a, peaks: computePeaks(a, b) };
+  decoded.set(i, v);
+  while (decoded.size > MAX_DECODED){ const k = decoded.keys().next().value; if (k === current) break; decoded.delete(k); }
+  return v;
+}
+
+function slowNet(){ const c = navigator.connection; return !!(c && (c.saveData || /(^|-)2g$/.test(c.effectiveType || ''))); }
+function prefetchNext(){
+  if (slowNet() || ready.length < 2) return;
+  const k = ready.indexOf(current);
+  const n = ready[(k + lastDir + ready.length) % ready.length];
+  if (decoded.has(n)) return;
+  const go = () => { fetchBytes(TRACKS[n].before); fetchBytes(TRACKS[n].after); };
+  (window.requestIdleCallback || (f => setTimeout(f, 1200)))(go);
+}
+
+function ringLoop(token){
+  const t = TRACKS[current];
+  const f = ((prog.get(t.before) || 0) + (prog.get(t.after) || 0)) / 2;
+  $('abp-ring').style.strokeDashoffset = 207.3 * (1 - f);
+  if (loading && token === loadToken) requestAnimationFrame(() => ringLoop(token));
+}
+
+function ensureCtx(){
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value = +vol.value; master.connect(ctx.destination);
+  gB = ctx.createGain(); gA = ctx.createGain();
+  gB.connect(master); gA.connect(master);
+  gB.gain.value = side === 'before' ? 1 : 0;
+  gA.gain.value = side === 'after' ? 1 : 0;
+}
+
+async function loadTrack(i){
+  const token = ++loadToken;
+  current = i; syncHeader(i);
+  stop(true);
+  bufA = bufB = null; peaks = null; startOff = 0; duration = 0;
+  tCur.textContent = '0:00'; tDur.textContent = '0:00'; draw(0);
+  status.hidden = true;
+  loading = true; $('abp-playWrap').classList.add('abp-loading'); ringLoop(token);
+  try {
+    const v = await getDecoded(i);
+    if (token !== loadToken) return;
+    ({ b:bufB, a:bufA, peaks } = v);
+    duration = Math.min(bufB.duration, bufA.duration);
+    tDur.textContent = fmt(duration);
+    wave.setAttribute('aria-valuemax', Math.round(duration));
+    loadedIdx = i;
+    draw(0);
+    if (wantPlay){ wantPlay = false; await ctx.resume(); start(0); }
+    prefetchNext();
+  } catch(e){
+    if (token !== loadToken) return;
+    status.textContent = 'Could not load this track. Check your connection and try again.';
+    status.hidden = false;
+  } finally {
+    if (token === loadToken){ loading = false; $('abp-playWrap').classList.remove('abp-loading'); }
+  }
+}
+
+function computePeaks(a, b){
+  const N = 320, out = new Float32Array(N), chans = [];
+  for (const buf of [a, b]) for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+  const len = Math.min(a.length, b.length), step = Math.floor(len / N);
+  for (let i = 0; i < N; i++){
+    let m = 0;
+    for (const d of chans) for (let j = i*step, e = j + step; j < e; j += 16){ const v = Math.abs(d[j]); if (v > m) m = v; }
+    out[i] = m;
+  }
+  const max = Math.max(...out) || 1;
+  return out.map(v => v / max);
+}
+
+function draw(pos){
+  const dpr = window.devicePixelRatio || 1, w = wave.clientWidth, h = wave.clientHeight;
+  if (cv.width !== w*dpr || cv.height !== h*dpr){ cv.width = w*dpr; cv.height = h*dpr; }
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const css = getComputedStyle(document.documentElement);
+  const on = css.getPropertyValue('--wave-on').trim(), off = css.getPropertyValue('--wave-off').trim();
+  const p = duration ? pos / duration : 0;
+  if (peaks){
+    const n = peaks.length, bw = w / n, gap = Math.max(1, bw * .35);
+    for (let i = 0; i < n; i++){
+      const bh = Math.max(2, peaks[i] * (h - 4)), x = i * bw;
+      g.fillStyle = (i + .5) / n <= p ? on : off;
+      g.fillRect(x, (h - bh) / 2, Math.max(1, bw - gap), bh);
+    }
+  }
+  head.style.left = (p * 100) + '%';
+  tCur.textContent = fmt(pos);
+  wave.setAttribute('aria-valuenow', Math.round(pos));
+}
+
+function position(){ return playing ? Math.min(duration, startOff + (ctx.currentTime - startCtx)) : startOff; }
+
+function start(offset){
+  srcB = ctx.createBufferSource(); srcB.buffer = bufB; srcB.connect(gB);
+  srcA = ctx.createBufferSource(); srcA.buffer = bufA; srcA.connect(gA);
+  const when = ctx.currentTime + 0.02;          // both start on the exact same sample
+  srcB.start(when, offset); srcA.start(when, offset);
+  startCtx = when; startOff = offset; playing = true;
+  srcA.onended = () => { if (playing && position() >= duration - 0.05){ stop(); startOff = 0; draw(0); } };
+  setIcon(); loop();
+}
+
+function stop(silent){
+  if (srcB){ try{ srcB.onended = null; srcB.stop(); }catch(e){} srcB.disconnect(); srcB = null; }
+  if (srcA){ try{ srcA.onended = null; srcA.stop(); }catch(e){} srcA.disconnect(); srcA = null; }
+  if (playing && !silent) startOff = position();
+  playing = false; cancelAnimationFrame(raf); setIcon();
+}
+
+async function toggle(){
+  ensureCtx();
+  if (ctx.state === 'suspended') ctx.resume();     // unlock audio inside the click
+  if (!bufA){
+    wantPlay = !wantPlay || !loading;
+    if (!loading) loadTrack(current);
+    return;
+  }
+  if (playing){ startOff = position(); stop(true); draw(startOff); }
+  else start(startOff >= duration - 0.05 ? 0 : startOff);
+}
+
+function seek(t){
+  t = Math.max(0, Math.min(duration - 0.01, t));
+  if (playing){ stop(true); start(t); } else { startOff = t; draw(t); }
+}
+
+function setSide(s){
+  side = s;
+  btnB.setAttribute('aria-pressed', s === 'before');
+  btnA.setAttribute('aria-pressed', s === 'after');
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  for (const [g, target] of [[gB, s === 'before' ? 1 : 0], [gA, s === 'after' ? 1 : 0]]){
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(target, now + XF);
+  }
+}
+
+function setIcon(){
+  playIcon.innerHTML = playing ? '<path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
+  playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+}
+
+function loop(){ draw(position()); raf = requestAnimationFrame(loop); }
+function fmt(s){ s = Math.max(0, s); return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0'); }
+
+/* volume */
+let lastVol = +vol.value;
+function applyVol(v){
+  vol.value = v; vol.style.setProperty('--v', (v*100) + '%');
+  if (master) master.gain.setTargetAtTime(v, ctx.currentTime, 0.015);
+  muteBtn.setAttribute('aria-label', v > 0 ? 'Mute' : 'Unmute');
+  $('abp-volIcon').innerHTML = v > 0
+    ? '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>' + (v > .5 ? '<path d="M19 5a10 10 0 0 1 0 14"/>' : '')
+    : '<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6M16 9l6 6"/>';
+}
+vol.addEventListener('input', () => { applyVol(+vol.value); if (+vol.value > 0) lastVol = +vol.value; });
+muteBtn.addEventListener('click', () => applyVol(+vol.value > 0 ? 0 : (lastVol || .8)));
+applyVol(+vol.value);
+
+/* scrubbing */
+let dragging = false;
+const posFromEvent = e => { const r = wave.getBoundingClientRect(); return ((e.clientX - r.left) / r.width) * duration; };
+wave.addEventListener('pointerdown', e => { if (!bufA) return; dragging = true; wave.setPointerCapture(e.pointerId); seek(posFromEvent(e)); });
+wave.addEventListener('pointermove', e => { if (dragging && !playing) seek(posFromEvent(e)); });
+wave.addEventListener('pointerup', e => { if (dragging){ dragging = false; if (playing) seek(posFromEvent(e)); } });
+wave.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight'){ seek(position() + 2); e.preventDefault(); }
+  if (e.key === 'ArrowLeft'){ seek(position() - 2); e.preventDefault(); }
+});
+
+/* controls */
+playBtn.addEventListener('click', toggle);
+btnB.addEventListener('click', () => setSide('before'));
+btnA.addEventListener('click', () => setSide('after'));
+sel.addEventListener('change', () => { wantPlay = playing || wantPlay; loadTrack(+sel.value); });
+const ready = TRACKS.map((t,i) => t.before ? i : -1).filter(i => i >= 0);
+function syncHeader(i){
+  const pad = n => String(n).padStart(2,'0');
+  $('abp-tNum').textContent = pad(i + 1) + ' / ' + pad(TRACKS.length);
+  $('abp-tName').textContent = TRACKS[i].title;
+  $('abp-tGenre').textContent = TRACKS[i].genre || '';
+  sel.value = i;
+  const k = ready.indexOf(i);
+  $('abp-prevBtn').disabled = ready.length < 2; $('abp-nextBtn').disabled = ready.length < 2;
+}
+function step(d){
+  if (ready.length < 2) return;
+  const k = ready.indexOf(+sel.value);
+  const next = ready[(k + d + ready.length) % ready.length];
+  lastDir = d;
+  wantPlay = playing || wantPlay;
+  loadTrack(next);
+}
+$('abp-prevBtn').addEventListener('click', () => step(-1));
+$('abp-nextBtn').addEventListener('click', () => step(1));
+document.querySelector('.abp-player').addEventListener('keydown', e => {
+  if (e.target.closest('select,input')) return;
+  if (e.code === 'Space'){ e.preventDefault(); toggle(); }
+  if (e.key === '1') setSide('before');
+  if (e.key === '2') setSide('after');
+  if (e.key === 'ArrowDown' || e.key === 'PageDown') step(1);
+  if (e.key === 'ArrowUp' || e.key === 'PageUp') step(-1);
+});
+window.addEventListener('resize', () => draw(bufA ? position() : 0));
+
+/* decoding needs an AudioContext; browsers allow creating one before a click, they only keep it silent until then */
+current = TRACKS.findIndex(t => t.before);
+syncHeader(current);
+const io = new IntersectionObserver(es => {
+  if (es.some(e => e.isIntersecting)){ io.disconnect(); if (loadedIdx < 0 && !loading) loadTrack(current); }
+}, { rootMargin:'300px 0px' });
+io.observe(document.querySelector('.abp-player'));
+
+})();
+</script>
 </body>
 </html>
