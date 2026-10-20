@@ -682,8 +682,15 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .ck-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:18px 20px;background:var(--bg-2)}
 .ck-total small{display:block;color:var(--text-mute);font-size:.8rem}
 .ck-total b{font-family:var(--display);font-size:1.9rem;color:var(--accent);white-space:nowrap}
-.ck-lock{font-size:.86rem;color:var(--text-dim);margin:0 0 10px}
-.ck-pay{max-width:440px}
+.ck-paybox{max-width:460px;margin:26px auto 0;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ck-paybox .h-captcha{margin:0 0 18px;min-height:78px}
+.ck-lock{font-size:.86rem;color:var(--text-dim);margin:0 0 12px}
+.ck-pay{width:100%}
+.ck-pay .ck-req{display:block;margin:0 auto}
+.ck-secure{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:14px 0 0;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.84rem;line-height:1.5;color:var(--text-dim);width:100%}
+.ck-secure svg{width:18px;height:18px;flex:none;color:#7fd29a;margin-top:1px}
+.ck-secure b{color:var(--text);font-weight:600}
+.ck-paybox .ck-msg{width:100%;max-width:none;text-align:left}
 .ck-pay.locked{opacity:.45;filter:saturate(.4)}
 .ck-pay.locked #ppButtons{pointer-events:none}
 .ck-req[disabled]{cursor:not-allowed}
@@ -1077,14 +1084,17 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
           <span id="ckAgreeText"></span>
         </label>
 
-        <div class="h-captcha" data-captcha="true" data-theme="dark" style="margin:18px 0"></div>
+        <div class="ck-paybox">
+          <div class="h-captcha" data-captcha="true" data-theme="dark" data-lang="en"></div>
 
-        <p class="ck-lock" id="ckLock">Tick the box and complete the check above to continue.</p>
-        <div class="ck-pay" id="ckPay">
-          <div id="ppButtons"></div>
-          <button type="button" class="pill solid btn-lg ck-req" id="ckReqBtn" disabled>Request booking</button>
+          <p class="ck-lock" id="ckLock">Tick the box and complete the check above to continue.</p>
+          <div class="ck-pay" id="ckPay">
+            <div id="ppButtons"></div>
+            <button type="button" class="pill solid btn-lg ck-req" id="ckReqBtn" disabled>Request booking</button>
+          </div>
+          <p class="ck-secure" id="ckSecure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><span><b>Secure checkout by PayPal.</b> Pay with your PayPal account or any debit or credit card &mdash; no PayPal account needed. Card details go straight to PayPal; we never see or store them.</span></p>
+          <div class="ck-msg" id="ckMsg" role="alert" hidden></div>
         </div>
-        <div class="ck-msg" id="ckMsg" role="alert" hidden></div>
         <p class="form-note legal-note">See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
         <div class="ck-nav"><button type="button" class="pill btn-lg" data-go="2">Back</button><span></span></div>
       </div>
@@ -1554,6 +1564,7 @@ function ckRenderReview(){
   ck('ckReqBtn').textContent = req ? 'Request details' : 'Request booking';
   ck('ckReqBtn').hidden = !isRequest();
   ck('ppButtons').hidden = isRequest();
+  ck('ckSecure').hidden = isRequest();
   ck('h-agree').checked = false;
   ckMsg('');
   if (!isRequest()) ckLoadPayPal();
@@ -1645,7 +1656,7 @@ function ckLoadPayPal(){
   if (ppLoaded) return ppLoaded;
   ppLoaded = new Promise((res, rej) => {
     const sc = document.createElement('script');
-    sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CHECKOUT.clientId) + '&currency=USD&intent=capture&components=buttons&disable-funding=paylater,venmo';
+    sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CHECKOUT.clientId) + '&currency=USD&intent=capture&components=buttons&disable-funding=paylater,venmo&locale=en_US';
     sc.dataset.namespace = 'paypalEvx';
     sc.onload = () => { ckRenderButtons(); res(); };
     sc.onerror = () => { ckMsg('PayPal could not be loaded. Check your connection or ad blocker and reload the page.', 'bad'); ppLoaded = null; rej(); };
