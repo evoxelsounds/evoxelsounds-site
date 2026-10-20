@@ -31,7 +31,7 @@ const PRICES = {
     pickOne: [['Up to 50 multitracks', 'Up to 100 multitracks', '100+ multitracks']],
   },
   mastering: {
-    name: 'Mastering', base: 229,
+    name: 'Mastering', base: 1,   // TEMP test price — restore to 229
     options: {
       'Stereo mastering': 0,
       'Stem mastering (up to 12 stems)': 70,
