@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Page not found — EVOXEL SOUNDS</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#08070b">
+<script>
+  /* 404s can be served at any depth, so point relative links at the site root */
+  (function(){
+    var p = location.pathname, m = p.match(/^\/evoxelsounds-site\//i);
+    var base = m ? m[0] : '/';
+    window.EVX_BASE = base;
+    document.write('<base href="' + base + '">');
+  })();
+</script>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/pages.css">
+<link rel="stylesheet" href="assets/a11y.css">
+<script src="assets/a11y.js"></script>
+<style>
+  .nf{display:grid;place-items:center;padding-block:56px 72px;min-height:calc(100vh - 160px)}
+  .nf-inner{width:100%;max-width:760px;text-align:center}
+  .nf-code{font-family:var(--display);font-weight:900;font-size:clamp(7rem,30vw,15rem);line-height:.8;letter-spacing:-.04em;color:#fff;opacity:.05;user-select:none}
+  .nf h1{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(2rem,6vw,3.4rem);line-height:1;letter-spacing:-.01em;margin-top:-.55em;text-wrap:balance}
+  .nf h1 span{color:var(--accent)}
+  .nf p{color:var(--text-dim);font-size:1.08rem;max-width:46ch;margin:18px auto 0}
+
+  /* a silent track: flat line, a playhead that finds nothing */
+  .flat{position:relative;height:70px;margin:38px auto 0;max-width:520px;border-radius:10px}
+  .flat svg{width:100%;height:100%;display:block}
+  .flat .bars rect{fill:rgba(245,239,230,.28)}
+  .flat .head{position:absolute;top:4px;bottom:4px;width:2px;background:var(--accent);border-radius:2px;left:0;box-shadow:0 0 14px rgba(230,162,60,.6);animation:sweep 4.5s cubic-bezier(.45,0,.55,1) infinite}
+  @keyframes sweep{0%{left:0}50%{left:calc(100% - 2px)}100%{left:0}}
+  .flat-times{display:flex;justify-content:space-between;max-width:520px;margin:8px auto 0;font-size:.8rem;color:var(--text-mute);font-variant-numeric:tabular-nums}
+
+  .nf-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+  .nf-actions .pill{padding:14px 26px;font-size:.98rem}
+  .nf-links{margin-top:26px;font-size:.92rem;color:var(--text-mute)}
+  .nf-links a{color:var(--text-dim);margin:0 8px;text-underline-offset:3px}
+  .nf-links a:hover{color:var(--accent)}
+  @media(prefers-reduced-motion:reduce){.flat .head{animation:none;left:50%}}
+</style>
+</head>
+<body>
+<header class="pg-head">
+  <div class="container">
+    <nav aria-label="Main">
+      <a href="./" aria-label="EVOXEL SOUNDS home"><img src="assets/logo.webp" alt="EVOXEL SOUNDS" width="78" height="32"></a>
+      <a class="pill solid" href="./#hire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>Hire</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" tabindex="-1" class="nf">
+  <div class="container"><div class="nf-inner">
+    <div class="nf-code" aria-hidden="true">404</div>
+    <h1>Nothing on <span>this track</span></h1>
+    <p>The page you're looking for was moved, renamed, or never made it to the final mix.</p>
+
+    <div class="flat" aria-hidden="true">
+      <svg viewBox="0 0 520 70" preserveAspectRatio="none"><g class="bars" id="bars"></g></svg>
+      <div class="head"></div>
+    </div>
+    <div class="flat-times" aria-hidden="true"><span>0:00</span><span>0:00</span></div>
+
+    <div class="nf-actions">
+      <a class="pill solid" href="./">Back to home</a>
+      <a class="pill" href="./#work">Hear the portfolio</a>
+    </div>
+    <p class="nf-links">Or go to <a href="./#services">Services</a> · <a href="./#about">About</a> · <a href="./#hire">Hire</a></p>
+  </div></div>
+</main>
+
+<footer class="pg-foot">
+  <div class="container">
+    <span>&copy; <span id="yr">2026</span> EVOXEL SOUNDS · Holon, Israel</span>
+    <div class="legal-links">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="refund.html">Refund Policy</a>
+      <a href="accessibility.html">Accessibility Statement</a>
+      <button type="button" class="a11y-open" data-a11y-open><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6.8" r="1.4" fill="currentColor" stroke="none"/><path d="M7 9.5l5 1 5-1M12 10.5v3.5l-2.5 4.5M12 14l2.5 4.5"/></svg>Accessibility options</button>
+    </div>
+  </div>
+</footer>
+<script>
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  // silent waveform: near-flat bars
+  (function(){
+    var g = document.getElementById('bars'), n = 104, w = 520 / n, out = '';
+    for (var i = 0; i < n; i++){
+      var h = 2 + Math.abs(Math.sin(i * 1.7) * Math.cos(i * .31)) * 3;
+      out += '<rect x="' + (i * w).toFixed(2) + '" y="' + (35 - h / 2).toFixed(2) + '" width="' + (w * .62).toFixed(2) + '" height="' + h.toFixed(2) + '" rx="1"/>';
+    }
+    g.innerHTML = out;
+  })();
+</script>
+</body>
+</html>

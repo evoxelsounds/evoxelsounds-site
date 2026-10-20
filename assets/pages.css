@@ -1,0 +1,84 @@
+/* ============================================================
+   EVOXEL SOUNDS — shared style for standalone pages
+   (privacy, refund, accessibility, 404). Same tokens as the site.
+   ============================================================ */
+:root{
+  --bg:#08070b; --bg-2:#0c0a10; --surface:#141019; --surface-2:#1b1622;
+  --border:rgba(230,180,120,.10); --border-2:rgba(230,180,120,.24);
+  --text:#f5efe6; --text-dim:#b3a999; --text-mute:#8f8572;
+  --accent:#e6a23c; --accent-2:#f3c87a;
+  --display:"Archivo",system-ui,sans-serif; --body:"Hanken Grotesk",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  color-scheme:dark;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-padding-top:96px}
+body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.65;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1000px 620px at 82% -8%,rgba(230,162,60,.14),transparent 60%),radial-gradient(820px 700px at -8% 22%,rgba(138,79,217,.12),transparent 55%)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.container{max-width:1080px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));position:relative;z-index:1}
+
+/* header */
+.pg-head{position:sticky;top:0;z-index:20;background:rgba(8,7,11,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0px)}
+.pg-head nav{display:flex;align-items:center;justify-content:space-between;height:72px;gap:16px}
+.pg-head img{height:32px;width:auto;display:block}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:100px;border:1px solid var(--border-2);font-weight:600;font-size:.9rem;text-decoration:none;color:var(--text);transition:all .3s var(--ease);font-family:var(--body)}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.pill.solid{background:var(--accent);color:#08070b;border-color:var(--accent)}
+.pill.solid:hover{color:#08070b;transform:translateY(-2px);box-shadow:0 14px 36px -12px var(--accent)}
+.pill svg{width:16px;height:16px;flex:none}
+
+main{flex:1;position:relative;z-index:1}
+
+/* legal document */
+.doc{padding-block:64px 88px}
+.doc-wrap{max-width:760px}
+.eyebrow{font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:12px}
+.doc h1{font-family:var(--display);font-weight:900;text-transform:uppercase;letter-spacing:-.015em;font-size:clamp(2.2rem,6vw,3.6rem);line-height:.98;text-wrap:balance}
+.meta{color:var(--text-mute);font-size:.88rem;margin-top:16px}
+.intro{color:var(--text-dim);font-size:1.08rem;margin-top:22px;max-width:62ch}
+.summary{margin-top:34px;border:1px solid var(--border-2);border-radius:14px;background:var(--surface);padding:22px 24px}
+.summary h2{font-family:var(--body);font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);font-weight:600;margin:0 0 10px}
+.summary ul{list-style:none;display:grid;gap:8px}
+.summary li{position:relative;padding-left:22px;color:var(--text);font-size:.98rem}
+.summary li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:5px;border-left:1.8px solid var(--accent);border-bottom:1.8px solid var(--accent);transform:rotate(-45deg)}
+.toc{margin-top:30px;display:flex;flex-wrap:wrap;gap:8px}
+.toc a{font-size:.84rem;color:var(--text-dim);text-decoration:none;border:1px solid var(--border-2);border-radius:100px;padding:6px 12px}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+.doc section{margin-top:48px;scroll-margin-top:96px}
+.doc h2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:1.25rem;letter-spacing:.01em;margin-bottom:14px;color:var(--text);text-wrap:balance}
+.doc h3{font-family:var(--body);font-weight:700;font-size:1.02rem;margin:22px 0 8px;color:var(--text)}
+.doc p,.doc li{color:var(--text-dim);font-size:1rem;max-width:68ch}
+.doc p + p{margin-top:12px}
+.doc strong{color:var(--text);font-weight:600}
+.doc ul.list{margin:12px 0 0 0;padding-left:20px;display:grid;gap:7px}
+.doc ul.list li::marker{color:var(--accent)}
+.doc a{color:var(--accent-2);text-underline-offset:3px}
+.doc a:hover{color:var(--accent)}
+.tbl{margin-top:14px;overflow-x:auto;border:1px solid var(--border-2);border-radius:12px}
+.tbl table{width:100%;border-collapse:collapse;min-width:520px;font-size:.92rem}
+.tbl th,.tbl td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text-dim)}
+.tbl th{color:var(--text-mute);font-weight:600;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;background:var(--surface)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td:first-child{color:var(--text);font-weight:600;white-space:nowrap}
+.callout{margin-top:16px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 12px 12px 0;padding:16px 18px}
+.callout p{color:var(--text)}
+.contact-card{margin-top:14px;display:grid;gap:4px;border:1px solid var(--border-2);border-radius:12px;padding:18px 20px;background:var(--surface)}
+.contact-card span{color:var(--text-dim)}
+.contact-card b{color:var(--text);font-weight:600}
+
+/* footer */
+.pg-foot{border-top:1px solid var(--border);padding-block:30px calc(30px + env(safe-area-inset-bottom,0px));color:var(--text-mute);font-size:.86rem;position:relative;z-index:1}
+.pg-foot .container{display:flex;justify-content:space-between;align-items:center;gap:14px 24px;flex-wrap:wrap}
+.legal-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.legal-links a{color:var(--text-dim);text-decoration:none}
+.legal-links a:hover,.legal-links a[aria-current="page"]{color:var(--accent)}
+
+@media(max-width:600px){
+  .pg-head nav{height:64px}
+  .pg-head img{height:28px}
+  .doc{padding-block:44px 64px}
+  .summary{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

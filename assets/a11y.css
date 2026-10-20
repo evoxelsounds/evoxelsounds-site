@@ -1,0 +1,68 @@
+/* ============================================================
+   EVOXEL SOUNDS — accessibility tools
+   Panel styles + the display modes it switches on <html>.
+   ============================================================ */
+
+/* skip links: hidden until focused with the keyboard */
+.a11y-skip{position:fixed;top:-120px;left:calc(10px + env(safe-area-inset-left,0px));z-index:1000;
+  background:#f5efe6;color:#08070b;font:600 .95rem/1.2 "Hanken Grotesk",system-ui,sans-serif;
+  padding:10px 16px;border-radius:10px;text-decoration:none}
+.a11y-skip:focus{top:calc(10px + env(safe-area-inset-top,0px));outline:3px solid #e6a23c;outline-offset:2px}
+
+/* footer trigger */
+.a11y-open{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid rgba(230,180,120,.24);color:inherit;
+  font:inherit;font-size:.84rem;padding:6px 12px;border-radius:100px;cursor:pointer;transition:border-color .2s,color .2s}
+.a11y-open:hover{border-color:#e6a23c;color:#e6a23c}
+.a11y-open:focus-visible{outline:2px solid #e6a23c;outline-offset:3px}
+.a11y-open svg{width:16px;height:16px;flex:none}
+
+/* panel */
+.a11y-panel{position:fixed;z-index:1001;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  width:min(340px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;
+  background:#141019;color:#f5efe6;border:1px solid rgba(230,180,120,.3);border-radius:16px;padding:18px;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.8);font:400 15px/1.5 "Hanken Grotesk",system-ui,sans-serif}
+.a11y-panel[hidden]{display:none!important}
+.a11y-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+.a11y-head h2{font:800 1rem/1.2 "Archivo",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;margin:0;color:#f5efe6}
+.a11y-x{background:none;border:1px solid rgba(230,180,120,.24);color:#f5efe6;width:34px;height:34px;border-radius:50%;cursor:pointer;display:grid;place-items:center;font-size:18px;line-height:1}
+.a11y-x:focus-visible,.a11y-opt:focus-visible,.a11y-foot button:focus-visible,.a11y-foot a:focus-visible{outline:2px solid #e6a23c;outline-offset:2px}
+.a11y-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.a11y-opt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:#0c0a10;color:#f5efe6;
+  border:1px solid rgba(230,180,120,.2);border-radius:12px;padding:12px;cursor:pointer;font:600 .86rem/1.25 "Hanken Grotesk",system-ui,sans-serif;min-height:74px}
+.a11y-opt svg{width:20px;height:20px;stroke:#e6a23c;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.a11y-opt small{font-weight:500;color:#b3a999;font-size:.74rem}
+.a11y-opt[aria-pressed="true"]{background:#e6a23c;color:#130d04;border-color:#e6a23c}
+.a11y-opt[aria-pressed="true"] svg{stroke:#130d04}
+.a11y-opt[aria-pressed="true"] small{color:rgba(19,13,4,.75)}
+.a11y-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(230,180,120,.15);font-size:.84rem}
+.a11y-foot button{background:none;border:none;color:#f3c87a;font:600 .84rem "Hanken Grotesk",system-ui,sans-serif;cursor:pointer;padding:4px 0}
+.a11y-foot a{color:#b3a999}
+.a11y-foot a:hover{color:#f5efe6}
+
+/* ---------- display modes ---------- */
+html.a11y-fs-1{font-size:112.5%}
+html.a11y-fs-2{font-size:125%}
+html.a11y-fs-3{font-size:140%}
+
+html.a11y-contrast{
+  --text:#ffffff; --text-dim:#ece6dc; --text-mute:#d2c9ba;
+  --dim:#ece6dc; --mute:#d2c9ba;
+  --border:rgba(245,239,230,.4); --border-2:rgba(245,239,230,.65);
+  --line:rgba(245,239,230,.4); --line-2:rgba(245,239,230,.65);
+  --wave-off:rgba(245,239,230,.6);
+}
+html.a11y-contrast body::before,html.a11y-contrast body::after{display:none!important}
+html.a11y-contrast .hero-bg::after{background:rgba(0,0,0,.82)!important}
+
+html.a11y-links a:not(.a11y-skip){text-decoration:underline!important;text-underline-offset:3px;text-decoration-thickness:2px}
+html.a11y-links a:focus-visible,html.a11y-links button:focus-visible{outline:3px solid #f3c87a!important;outline-offset:3px}
+
+html.a11y-font body,html.a11y-font body *:not(svg):not(svg *){font-family:Verdana,"Segoe UI",Arial,sans-serif!important;letter-spacing:.02em!important;word-spacing:.06em}
+html.a11y-font p,html.a11y-font li{line-height:1.8!important}
+
+html.a11y-still *,html.a11y-still *::before,html.a11y-still *::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important;scroll-behavior:auto!important}
+html.a11y-still .reveal{opacity:1!important;transform:none!important}
+
+html.a11y-cursor,html.a11y-cursor *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M4 2l26 18-12 2 7 13-5 3-7-13-9 8z' fill='%23fff' stroke='%23000' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2,auto!important}
+
+@media(max-width:480px){.a11y-panel{left:calc(16px + env(safe-area-inset-left,0px));right:calc(16px + env(safe-area-inset-right,0px));width:auto}}

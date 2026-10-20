@@ -73,7 +73,7 @@
   --border-2:rgba(230,180,120,.24);
   --text:#f5efe6;
   --text-dim:#b3a999;
-  --text-mute:#6f6655;
+  --text-mute:#8f8572;
   --accent:#e6a23c;
   --accent-2:#f3c87a;
   --glow-warm:rgba(230,162,60,.18);
@@ -507,7 +507,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .abp{
   --bg:#08070b; --surface:#141019; --surface-2:#1b1622; --well:#0c0a10;
   --line:rgba(230,180,120,.12); --line-2:rgba(230,180,120,.26);
-  --text:#f5efe6; --dim:#b3a999; --mute:#7a7060;
+  --text:#f5efe6; --dim:#b3a999; --mute:#8f8572;
   --accent:#e6a23c; --accent-2:#f3c87a; --accent-ink:#130d04;
   --wave-off:rgba(245,239,230,.38); --wave-on:#e6a23c;
   --display:"Archivo",system-ui,sans-serif;
@@ -633,7 +633,18 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .abp-lead{color:var(--dim);max-width:58ch;margin:14px 0 0;font-size:1.02rem;line-height:1.55}
 .abp-label{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-mute);font-weight:600;margin:0 0 14px}
 .abp-rel{margin-top:56px}
+
+/* ===== LEGAL LINKS (footer) ===== */
+.legal-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.legal-links a{color:var(--text-dim);text-decoration:none}
+.legal-links a:hover{color:var(--accent)}
+.legal-note a{color:var(--accent-2);text-decoration:underline;text-underline-offset:3px}
+.foot-bottom{align-items:center}
+.mini-foot .container{align-items:center}
+@media(max-width:640px){.legal-links{gap:10px 16px}}
 </style>
+<link rel="stylesheet" href="assets/a11y.css">
+<script src="assets/a11y.js"></script>
 </head>
 <body>
 <noscript><div style="position:fixed;inset:0;z-index:999;background:#08070b;color:#f5efe6;display:grid;place-items:center;padding:30px;text-align:center;font-family:system-ui">This site needs JavaScript. If you opened the file from a preview (WhatsApp / Files), tap the share icon and choose "Open in Safari".</div></noscript>
@@ -913,7 +924,14 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <div class="foot-col"><h5>Follow</h5><a href="https://instagram.com/evoxelsounds" target="_blank" rel="noopener" class="foot-social"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>evoxelsounds</a><a href="https://www.instagram.com/akicohenn/" target="_blank" rel="noopener" class="foot-social"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>akicohenn</a><a href="https://open.spotify.com/playlist/178T7C0dTv1c8I0am90lGn" target="_blank" rel="noopener">Spotify</a></div>
       </div>
     </div>
-    <div class="foot-bottom"><span>© <span id="year"></span> EVOXEL SOUNDS. All rights reserved.</span><span>Holon, Israel</span></div>
+    <div class="foot-bottom"><span>© <span id="year"></span> EVOXEL SOUNDS · Holon, Israel</span>
+      <div class="legal-links" role="navigation" aria-label="Legal">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="refund.html">Refund Policy</a>
+        <a href="accessibility.html">Accessibility Statement</a>
+        <button type="button" class="a11y-open" data-a11y-open><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6.8" r="1.4" fill="currentColor" stroke="none"/><path d="M7 9.5l5 1 5-1M12 10.5v3.5l-2.5 4.5M12 14l2.5 4.5"/></svg>Accessibility options</button>
+      </div>
+    </div>
   </div>
 </footer>
 </div><!-- /view-home -->
@@ -971,6 +989,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <button type="submit" class="pill solid btn-lg">Request booking</button>
       </div>
       <p class="form-note">No payment is taken on this page. The request is reviewed first, then a summary message arrives with file instructions and the PayPal payment link. Replies usually within 24 hours.</p>
+      <p class="form-note legal-note">By requesting a booking you agree to our <a href="refund.html">Refund Policy</a>. Payments are refundable in full until work on your project starts. See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
       <div class="sent" id="sentMsg">Your booking request was sent. Check your inbox, the confirmation with the scope and payment link is on its way.</div>
     </form>
   </div>
@@ -1021,8 +1040,13 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 
 <div class="mini-foot">
   <div class="container">
-    <span>© <span id="year2"></span> EVOXEL SOUNDS. All rights reserved.</span>
-    <span><a href="#" data-nav="home">Back to the studio</a></span>
+    <span>© <span id="year2"></span> EVOXEL SOUNDS · <a href="#" data-nav="home">Back to the studio</a></span>
+    <div class="legal-links" role="navigation" aria-label="Legal">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="refund.html">Refund Policy</a>
+        <a href="accessibility.html">Accessibility Statement</a>
+        <button type="button" class="a11y-open" data-a11y-open><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6.8" r="1.4" fill="currentColor" stroke="none"/><path d="M7 9.5l5 1 5-1M12 10.5v3.5l-2.5 4.5M12 14l2.5 4.5"/></svg>Accessibility options</button>
+      </div>
   </div>
 </div>
 
