@@ -647,6 +647,67 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .foot-bottom{align-items:center}
 .mini-foot .container{align-items:center}
 @media(max-width:640px){.legal-links{gap:10px 16px}}
+
+/* ===== CHECKOUT (hire view) ===== */
+#hireForm [hidden]{display:none!important}
+#hireForm .pill.solid,#hireForm .pill{width:auto;margin-top:0}
+.ck-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 6px;list-style:none;padding:0}
+.ck-steps li{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg-2);color:var(--text-mute);font-weight:600;font-size:.9rem;min-width:0}
+.ck-steps .n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor;font:700 .78rem var(--display)}
+.ck-steps .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-steps li.on{color:var(--text);border-color:var(--accent)}
+.ck-steps li.on .n{background:var(--accent);border-color:var(--accent);color:#130d04}
+.ck-steps li.done{color:var(--text-dim)}
+.ck-steps li.done .n{border-color:#7fd29a;color:#7fd29a}
+.ck-tag{display:inline-block;margin-top:10px;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);border:1px solid var(--border-2);border-radius:100px;padding:3px 9px}
+.ck-note{margin-top:22px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 12px 12px 0;padding:14px 16px;color:var(--text);font-size:.95rem}
+.ck-nav{display:flex;justify-content:space-between;gap:12px;margin-top:26px}
+#view-hire .field small{color:var(--text-mute);font-weight:500}
+#view-hire .field input[type=date]{min-height:48px}
+.ck-err{display:none;font-size:.82rem;color:#ff9d8f;margin-top:6px}
+.ck-hint{display:block;font-size:.82rem;color:var(--text-mute);margin-top:6px}
+#view-hire .field.bad input,#view-hire .field.bad textarea{border-color:#ff6b5a;box-shadow:0 0 0 1px #ff6b5a}
+.field.bad .ck-err{display:block}
+.ck-srcs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ck-src{font-size:.76rem;color:var(--text-dim);border:1px solid var(--border-2);border-radius:100px;padding:3px 10px}
+.ck-src.on{border-color:#7fd29a;color:#7fd29a}
+.ck-bar{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:4;background:rgba(20,16,25,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.ck-review{border:1px solid var(--border-2);border-radius:16px;background:linear-gradient(160deg,var(--surface-2),var(--surface));overflow:hidden}
+.ck-row{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);align-items:baseline}
+.ck-k{color:var(--text-mute);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.ck-v{color:var(--text);min-width:0;overflow-wrap:anywhere}
+.ck-v small{display:block;color:var(--text-dim)}
+.ck-p{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ck-edit{background:none;border:none;color:var(--accent-2);font:600 .82rem var(--body);cursor:pointer;padding:0}
+.ck-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:18px 20px;background:var(--bg-2)}
+.ck-total small{display:block;color:var(--text-mute);font-size:.8rem}
+.ck-total b{font-family:var(--display);font-size:1.9rem;color:var(--accent);white-space:nowrap}
+.ck-lock{font-size:.86rem;color:var(--text-dim);margin:0 0 10px}
+.ck-pay{max-width:440px}
+.ck-pay.locked{opacity:.45;filter:saturate(.4)}
+.ck-pay.locked #ppButtons{pointer-events:none}
+.ck-req[disabled]{cursor:not-allowed}
+.ck-msg{margin-top:14px;padding:12px 14px;border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-size:.92rem;max-width:60ch}
+.ck-msg.bad{border-color:#ff6b5a;color:#ffc3b9}
+.ck-done{border:1px solid #7fd29a;border-radius:18px;background:var(--surface);padding:32px 24px;text-align:center;outline:none}
+.ck-ic{width:56px;height:56px;border-radius:50%;background:rgba(127,210,154,.12);color:#7fd29a;display:grid;place-items:center;margin:0 auto 14px;font-size:1.6rem}
+.ck-done h3{font-family:var(--display);text-transform:uppercase;font-size:1.6rem;margin:0}
+.ck-done p{color:var(--text-dim);max-width:52ch;margin:10px auto 0}
+.ck-oid{display:inline-block;margin-top:14px;font:600 .9rem ui-monospace,Menlo,monospace;background:var(--bg-2);border:1px solid var(--border-2);border-radius:8px;padding:6px 10px;color:var(--text)}
+.ck-next{margin:22px auto 0;max-width:460px;text-align:left;display:grid;gap:10px;counter-reset:n;padding:0;list-style:none}
+.ck-next li{counter-increment:n;display:flex;gap:12px;color:var(--text-dim);font-size:.94rem}
+.ck-next li::before{content:counter(n);flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);display:grid;place-items:center;font:700 .74rem var(--display)}
+.ck-panel .step-label{margin-top:30px}
+@media(max-width:640px){
+  .ck-steps .t{display:none}
+  .ck-steps li{justify-content:center}
+  .ck-row{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 16px}
+  .ck-k{grid-column:1/-1}
+  .ck-total{padding:16px}
+  .ck-total b{font-size:1.6rem}
+  .ck-nav .pill.btn-lg{padding:13px 20px}
+  .ck-bar .pill.btn-lg{width:auto}
+}
 </style>
 <link rel="stylesheet" href="assets/a11y.css">
 <script src="assets/a11y.js"></script>
@@ -961,47 +1022,86 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 <section style="padding-top:150px">
   <div class="container">
     <div class="ghost-head reveal"><div class="ghost">Booking</div><div class="real">Hire</div></div>
-    <form id="hireForm" action="https://api.web3forms.com/submit" method="POST">
+    <form id="hireForm" novalidate onsubmit="return false">
       <input type="hidden" name="access_key" value="ef65894a-4d76-4e11-adb3-4e3e299bca33">
       <input type="hidden" name="subject" value="EVOXEL SOUNDS — booking request">
       <input type="hidden" name="service" id="hidService">
       <input type="hidden" name="options" id="hidOptions">
       <input type="hidden" name="total" id="hidTotal">
 
-      <div class="step-label reveal">01 — Select the service</div>
-      <div class="pick-grid reveal" id="pickGrid"></div>
+      <ol class="ck-steps" id="ckSteps">
+        <li data-s="1"><span class="n">1</span><span class="t">Service</span></li>
+        <li data-s="2"><span class="n">2</span><span class="t">Your track</span></li>
+        <li data-s="3"><span class="n">3</span><span class="t" id="ckStep3">Review &amp; pay</span></li>
+      </ol>
 
-      <div class="step-label">02 — Set the options</div>
-      <div class="conf-flat" id="confPanel"></div>
-
-      <div class="step-label" id="your-details">03 — Your details</div>
-      <div class="conf">
-        <div class="two-col">
-          <div class="field"><label for="h-name">Name</label><input id="h-name" type="text" name="name" placeholder="Your name" required></div>
-          <div class="field"><label for="h-email">Email</label><input id="h-email" type="email" name="email" placeholder="you@email.com" required></div>
-        </div>
-        <div class="field"><label for="demo">Demo / reference link (optional)</label><input id="demo" type="url" name="demo_link" placeholder="Dropbox, Drive, SoundCloud or Spotify link"></div>
-        <div class="field" style="margin-bottom:0"><label for="h-message">About the project</label><textarea id="h-message" name="message" placeholder="Genre, reference tracks, deadline, and anything we should know before we start." required></textarea></div>
+      <!-- STEP 1 -->
+      <div class="ck-panel" id="ck1">
+        <div class="step-label">Choose a service</div>
+        <div class="pick-grid" id="pickGrid"></div>
+        <div class="conf-flat" id="confPanel"></div>
+        <p class="ck-note" id="ckProdNote" hidden>Music Production is arranged privately. Send a short request and we'll reply with the details, terms and price for your project. No payment is taken for this request.</p>
       </div>
 
-      <label class="agree" for="h-agree">
-        <input type="checkbox" id="h-agree" name="terms_agreed" value="Agreed to Terms of Service and Refund Policy (version October 20, 2026) and asked for work to start right away" required>
-        <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="refund.html" target="_blank" rel="noopener">Refund Policy</a>, and ask EVOXEL SOUNDS to start work once payment is confirmed. I understand payments are non-refundable after work has started.</span>
-      </label>
+      <!-- STEP 2 -->
+      <div class="ck-panel" id="ck2" hidden>
+        <div class="step-label" id="your-details">About you and the track</div>
+        <div class="conf">
+          <div class="two-col">
+            <div class="field"><label for="h-name">Name</label><input id="h-name" type="text" autocomplete="name" placeholder="Your name"><span class="ck-err">Enter your name.</span></div>
+            <div class="field"><label for="h-email">Email</label><input id="h-email" type="email" autocomplete="email" placeholder="you@email.com"><span class="ck-err">Enter a valid email address.</span></div>
+            <div class="field"><label for="h-artist">Artist name</label><input id="h-artist" type="text" placeholder="As it will appear on the release"><span class="ck-err">Enter the artist name.</span></div>
+            <div class="field"><label for="h-title">Track title</label><input id="h-title" type="text" placeholder="A working title is fine"><span class="ck-err">Enter the track title.</span></div>
+            <div class="field"><label for="h-genre">Genre</label><input id="h-genre" type="text" placeholder="e.g. Melodic Techno"></div>
+            <div class="field"><label for="h-dead">Deadline <small>(optional)</small></label><input id="h-dead" type="date"></div>
+          </div>
+          <div class="field" id="ckLinkField">
+            <label for="h-link"><span id="ckLinkLabel">Link to your files</span> <small id="ckLinkOpt"></small></label>
+            <input id="h-link" type="url" inputmode="url" placeholder="https://www.dropbox.com/… or https://soundcloud.com/…">
+            <div class="ck-srcs"><span class="ck-src" id="ckSrcDb">Dropbox</span><span class="ck-src" id="ckSrcSc">SoundCloud</span></div>
+            <span class="ck-hint" id="ckLinkHint">Share a Dropbox folder with your stems, or a private SoundCloud link. Make sure anyone with the link can open it.</span>
+            <span class="ck-err">Use a Dropbox or SoundCloud link.</span>
+          </div>
+          <div class="field" style="margin-bottom:0"><label for="h-message">Message</label><textarea id="h-message" placeholder="References, the sound you're after, and anything we should know before we start."></textarea></div>
+        </div>
+        <div class="ck-nav"><button type="button" class="pill btn-lg" data-go="1">Back</button><span></span></div>
+      </div>
 
-      <div class="h-captcha" data-captcha="true" data-theme="dark" style="margin:18px 0"></div>
+      <!-- STEP 3 -->
+      <div class="ck-panel" id="ck3" hidden>
+        <div class="step-label" id="ckP3Label">Check everything, then pay</div>
+        <div class="ck-review" id="ckReview"></div>
 
-      <div class="total-bar reveal">
+        <label class="agree" for="h-agree">
+          <input type="checkbox" id="h-agree">
+          <span id="ckAgreeText"></span>
+        </label>
+
+        <div class="h-captcha" data-captcha="true" data-theme="dark" style="margin:18px 0"></div>
+
+        <p class="ck-lock" id="ckLock">Tick the box and complete the check above to continue.</p>
+        <div class="ck-pay" id="ckPay">
+          <div id="ppButtons"></div>
+          <button type="button" class="pill solid btn-lg ck-req" id="ckReqBtn" disabled>Request booking</button>
+        </div>
+        <div class="ck-msg" id="ckMsg" role="alert" hidden></div>
+        <p class="form-note legal-note">See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
+        <div class="ck-nav"><button type="button" class="pill btn-lg" data-go="2">Back</button><span></span></div>
+      </div>
+
+      <!-- DONE -->
+      <div class="ck-panel" id="ck4" hidden>
+        <div class="ck-done" id="ckDone" tabindex="-1"></div>
+      </div>
+
+      <div class="total-bar ck-bar" id="ckBar">
         <div>
-          <div class="tl">Total</div>
+          <div class="tl" id="ckBarLabel">Total</div>
           <div class="tv"><span id="totalVal">$0</span> <small id="totalUnit">/ track</small></div>
           <div class="cur-note" id="curNote" hidden></div>
         </div>
-        <button type="submit" class="pill solid btn-lg">Request booking</button>
+        <button type="button" class="pill solid btn-lg" id="ckBarNext" data-go="2">Continue</button>
       </div>
-      <p class="form-note">No payment is taken on this page. The request is reviewed first, then a summary message arrives with file instructions and the PayPal payment link. Replies usually within 24 hours.</p>
-      <p class="form-note legal-note">See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
-      <div class="sent" id="sentMsg">Your booking request was sent. Check your inbox, the confirmation with the scope and payment link is on its way.</div>
     </form>
   </div>
 </section>
@@ -1012,14 +1112,15 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     <div class="reveal">
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">How it works</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
-          <p>Choose the service, set the options, and send the request. You will receive a summary message detailing the work terms and a PayPal payment link. Work starts once payment is confirmed.</p>
+          <p>Choose the service, tell us about your track, and pay securely through PayPal. Your booking is confirmed straight away, and work starts once we have your files.</p>
           <ol style="margin-top:12px">
-            <li><strong>Choose the service</strong> — ghost production, mixing, or mastering.</li>
-            <li><strong>Set the options</strong> — stem count, extra versions, and anything the service offers. The total updates as you go.</li>
-            <li><strong>Tell us about the project</strong> — genre, references, deadline, and a link to a demo if you have one.</li>
-            <li><strong>Request booking</strong> — you will receive a summary message with the agreed work terms, file delivery instructions, and a PayPal payment link.</li>
-            <li><strong>Payment confirms the slot</strong> — work starts once payment is received, and the first version arrives within the stated delivery time.</li>
+            <li><strong>Choose the service</strong> and the options you need. The total updates as you go.</li>
+            <li><strong>Tell us about the track</strong> — title, artist, genre, references, and a Dropbox or SoundCloud link to your files.</li>
+            <li><strong>Review and pay</strong> through PayPal, by PayPal account or card. You get an order number right away.</li>
+            <li><strong>We check your files</strong> and confirm the delivery date by email.</li>
+            <li><strong>First version, then revisions</strong> until it's right.</li>
           </ol>
+          <p style="margin-top:12px">Music Production works differently: send a request and we reply privately with the details, terms and price.</p>
         </div></div></div></div>
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">Should I send stems with or without processing?</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
@@ -1038,7 +1139,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         </div></div></div></div>
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">Payment</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
-          <p>Payment runs through PayPal. After you request the booking, the summary message includes a secure payment link. Payments are made in advance and confirm the booking.</p>
+          <p>Payment runs through PayPal, in US dollars, at checkout. You can pay with a PayPal account, or by card where PayPal offers it. We never see your card details. Prices shown in other currencies are estimates; your bank or PayPal converts the US dollar amount.</p>
         </div></div></div></div>
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">Custom Inquiries</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
@@ -1170,7 +1271,7 @@ function niceRound(v){
   const step = v < 100 ? 1 : v < 1000 ? 5 : v < 10000 ? 10 : v < 100000 ? 100 : 1000;
   return Math.round(v / step) * step;
 }
-function toLocal(usd){ return usd ? niceRound(usd * CUR.rate) : 0; }
+function toLocal(usd){ return usd ? (CUR.code === 'USD' ? usd : niceRound(usd * CUR.rate)) : 0; }
 function money(usd){ return CUR.fmt.format(toLocal(usd)); }
 function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
 function lsSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
@@ -1361,21 +1462,259 @@ function update(instant){
   document.getElementById('hidTotal').value = '$' + total + ' USD ' + s.unit + (CUR.code !== 'USD' ? ' (shown to client as ' + CUR.fmt.format(localTotal) + ', ' + CUR.country + ')' : '');
 }
 
-select('production');
-initCurrency();
+/* ============================================================
+   CHECKOUT — three steps, PayPal through the Cloudflare Worker.
+   While CHECKOUT.api is empty the last step sends a booking
+   request by email instead (no payment), as before.
+   ============================================================ */
+const CHECKOUT = {
+  api: '',                                   // Worker URL, e.g. https://evoxel-checkout.<name>.workers.dev
+  clientId: 'BAA1XUti_SL4dhsSSXb6UYwBR8fXFxwDUA8iMk7ez4akhofmsz_r8svzIuH732nE4vII1QUuEM3S4n60mk',
+  requestOnly: ['production'],               // services that send a request instead of taking payment
+  web3formsKey: 'ef65894a-4d76-4e11-adb3-4e3e299bca33',
+};
+const ck = id => document.getElementById(id);
+const usdFmt = n => '$' + Number(n).toLocaleString('en-US');
+const escH = v => String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isRequest = () => CHECKOUT.requestOnly.includes(current) || !CHECKOUT.api;
+let ckStep = 1;
 
-// submit feedback
-document.getElementById('hireForm').addEventListener('submit', (e) => {
-  const hCaptcha = document.querySelector('textarea[name=h-captcha-response]');
-  if (!hCaptcha || !hCaptcha.value) {
-    e.preventDefault();
-    alert('Please confirm the "I am human" check before sending.');
-    return;
-  }
-  setTimeout(() => { document.getElementById('sentMsg').style.display = 'block'; }, 400);
+// tags on the service cards
+document.querySelectorAll('#pickGrid .pick').forEach(p => {
+  const t = document.createElement('div'); t.className = 'ck-tag';
+  t.textContent = CHECKOUT.requestOnly.includes(p.dataset.slug) ? 'Request details' : 'From ' + usdFmt(SERVICES[p.dataset.slug].base);
+  p.appendChild(t);
 });
 
+function ckChosen(){ return [...confPanel.querySelectorAll('input:checked')].map(i => ({ label: i.dataset.label, price: +i.dataset.price })); }
+function ckTotal(){ return SERVICES[current].base + ckChosen().reduce((a, c) => a + c.price, 0); }
 
+// path-dependent wording (called whenever the service changes)
+function ckSyncPath(){
+  const req = CHECKOUT.requestOnly.includes(current);
+  ck('ckProdNote').hidden = !req;
+  ck('ckBarLabel').textContent = req ? 'Starting price' : 'Total';
+  ck('ckStep3').textContent = isRequest() ? 'Review & request' : 'Review & pay';
+  ck('ckLinkLabel').textContent = req ? 'Demo or reference link' : 'Link to your files';
+  ck('ckLinkOpt').textContent = req ? '(optional)' : '';
+  ck('ckLinkHint').textContent = req
+    ? 'A Dropbox or SoundCloud link to a demo or reference, if you have one.'
+    : 'Share a Dropbox folder with your stems, or a private SoundCloud link. Make sure anyone with the link can open it.';
+}
+const _select = select;
+select = function(slug){ _select(slug); ckSyncPath(); };
+
+/* ---------- link: Dropbox or SoundCloud only ---------- */
+function ckLinkHost(v){
+  try {
+    const h = new URL(v.trim()).hostname.replace(/^www\./, '');
+    if (/(^|\.)dropbox\.com$|^db\.tt$/.test(h)) return 'db';
+    if (/(^|\.)soundcloud\.com$|^snd\.sc$/.test(h)) return 'sc';
+  } catch(e){}
+  return null;
+}
+ck('h-link').addEventListener('input', () => {
+  const h = ckLinkHost(ck('h-link').value);
+  ck('ckSrcDb').classList.toggle('on', h === 'db'); ck('ckSrcSc').classList.toggle('on', h === 'sc');
+  ck('ckLinkField').classList.remove('bad');
+});
+['h-name','h-email','h-artist','h-title'].forEach(id => ck(id).addEventListener('input', () => ck(id).closest('.field').classList.remove('bad')));
+
+function ckValidate(){
+  const req = CHECKOUT.requestOnly.includes(current); let first = null;
+  const check = (id, good) => { ck(id).closest('.field').classList.toggle('bad', !good); if (!good && !first) first = ck(id); };
+  check('h-name', ck('h-name').value.trim().length > 1);
+  check('h-email', /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ck('h-email').value.trim()));
+  check('h-artist', ck('h-artist').value.trim().length > 0);
+  check('h-title', ck('h-title').value.trim().length > 0);
+  const lv = ck('h-link').value.trim();
+  check('h-link', req ? (!lv || !!ckLinkHost(lv)) : !!ckLinkHost(lv));
+  if (first){ first.focus(); return false; }
+  return true;
+}
+
+/* ---------- review ---------- */
+function ckRenderReview(){
+  const s = SERVICES[current], req = CHECKOUT.requestOnly.includes(current), v = id => escH(ck(id).value.trim());
+  const rows = [['Service', s.name, req ? '' : usdFmt(s.base), 1]];
+  ckChosen().forEach(c => rows.push(['', c.label, c.price ? '+' + usdFmt(c.price) : 'included', 1]));
+  rows.push(['Track', v('h-title') + '<small>' + v('h-artist') + (v('h-genre') ? ' · ' + v('h-genre') : '') + '</small>', '', 2]);
+  rows.push(['Contact', v('h-name') + '<small>' + v('h-email') + '</small>', '', 2]);
+  if (v('h-link')) rows.push([req ? 'Demo' : 'Files', v('h-link'), '', 2]);
+  if (ck('h-dead').value) rows.push(['Deadline', new Date(ck('h-dead').value + 'T12:00').toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }), '', 2]);
+  if (v('h-message')) rows.push(['Message', v('h-message'), '', 2]);
+  const local = (CUR.code !== 'USD') ? ' · about ' + CUR.fmt.format(toLocal(ckTotal())) : '';
+  ck('ckReview').innerHTML = rows.map(r => '<div class="ck-row"><span class="ck-k">' + r[0] + '</span><span class="ck-v">' + r[1] + '</span><span class="ck-p">' + (r[2] || '<button type="button" class="ck-edit" data-go="' + r[3] + '">Edit</button>') + '</span></div>').join('') +
+    (req ? '<div class="ck-total"><span>Starting price<small>The final price and terms are sent to you privately</small></span><b>from ' + usdFmt(ckTotal()) + '</b></div>'
+         : '<div class="ck-total"><span>' + (CHECKOUT.api ? 'Total to pay' : 'Total') + '<small>' + (CHECKOUT.api ? 'Charged in USD through PayPal' : 'In USD. You pay through a PayPal link after we confirm') + local + '</small></span><b>' + usdFmt(ckTotal()) + '</b></div>');
+  ck('ckP3Label').textContent = isRequest() ? 'Check everything, then send your request' : 'Check everything, then pay';
+  ck('ckAgreeText').innerHTML = req
+    ? 'I have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and understand this is a request for details, not a booking.'
+    : 'I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="refund.html" target="_blank" rel="noopener">Refund Policy</a>, and ask EVOXEL SOUNDS to start work once payment is confirmed. I understand payments are non-refundable after work has started.';
+  ck('ckReqBtn').textContent = req ? 'Request details' : 'Request booking';
+  ck('ckReqBtn').hidden = !isRequest();
+  ck('ppButtons').hidden = isRequest();
+  ck('h-agree').checked = false;
+  ckMsg('');
+  if (!isRequest()) ckLoadPayPal();
+}
+
+/* ---------- step navigation ---------- */
+function ckGo(n){
+  if (n === 3 && ckStep < 3 && !ckValidate()){ if (ckStep !== 2) ckGo(2); return; }
+  ckStep = n;
+  [1,2,3,4].forEach(i => ck('ck' + i).hidden = i !== n);
+  document.querySelectorAll('#ckSteps li').forEach(li => {
+    const k = +li.dataset.s;
+    li.className = k === n ? 'on' : (k < n ? 'done' : '');
+    if (k === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+  });
+  ck('ckBar').hidden = n >= 3;
+  ck('ckBarNext').dataset.go = n === 1 ? '2' : '3';
+  ck('ckBarNext').textContent = n === 1 ? 'Continue' : 'Review';
+  if (n === 3) ckRenderReview();
+  const top = document.getElementById('hireForm').getBoundingClientRect().top + window.pageYOffset - 110;
+  if (window.pageYOffset > top) window.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  if (n === 4) ck('ckDone').focus();
+}
+document.getElementById('hireForm').addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g){ e.preventDefault(); ckGo(+g.dataset.go); }
+});
+
+/* ---------- gate: agreement + human check ---------- */
+function ckCaptcha(){ const t = document.querySelector('#ck3 textarea[name="h-captcha-response"]'); return t ? t.value : ''; }
+function ckReady(){ return ck('h-agree').checked && !!ckCaptcha(); }
+let ppActions = null;
+function ckGate(){
+  const ok = ckReady();
+  ck('ckLock').hidden = ok;
+  ck('ckPay').classList.toggle('locked', !ok);
+  ck('ckReqBtn').disabled = !ok;
+  if (ppActions) ok ? ppActions.enable() : ppActions.disable();
+}
+ck('h-agree').addEventListener('change', ckGate);
+setInterval(() => { if (ckStep === 3) ckGate(); }, 500);   // the captcha widget sets its token without an event
+
+function ckMsg(text, kind){
+  const m = ck('ckMsg'); m.hidden = !text; m.textContent = text || ''; m.className = 'ck-msg' + (kind ? ' ' + kind : '');
+}
+
+/* ---------- email the details (Web3Forms) ---------- */
+async function ckSendDetails(ref, subject){
+  const s = SERVICES[current], v = id => ck(id).value.trim();
+  const fd = new FormData();
+  fd.append('access_key', CHECKOUT.web3formsKey);
+  fd.append('subject', subject);
+  fd.append('from_name', 'EVOXEL SOUNDS website');
+  fd.append('order_ref', ref);
+  fd.append('service', s.name);
+  fd.append('options', ckChosen().map(c => c.label + (c.price ? ' (+$' + c.price + ')' : '')).join(' | ') || 'None');
+  fd.append('total', '$' + ckTotal() + ' USD' + (CUR.code !== 'USD' ? ' (shown as about ' + CUR.fmt.format(toLocal(ckTotal())) + ', ' + CUR.country + ')' : ''));
+  fd.append('name', v('h-name')); fd.append('email', v('h-email')); fd.append('replyto', v('h-email'));
+  fd.append('artist', v('h-artist')); fd.append('track_title', v('h-title')); fd.append('genre', v('h-genre') || '-');
+  fd.append('deadline', v('h-dead') || '-'); fd.append('files_link', v('h-link') || '-'); fd.append('message', v('h-message') || '-');
+  fd.append('terms', CHECKOUT.requestOnly.includes(current) ? 'Request for details (no booking)' : 'Agreed to Terms of Service and Refund Policy (October 20, 2026) and asked for work to start');
+  fd.append('h-captcha-response', ckCaptcha());
+  const r = await fetch('https://api.web3forms.com/submit', { method:'POST', headers:{ Accept:'application/json' }, body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.success) throw new Error(j.message || 'send failed');
+}
+const ckRef = () => 'EVX-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+function ckResetCaptcha(){ try { window.hcaptcha && window.hcaptcha.reset(); } catch(e){} ckGate(); }
+
+/* ---------- request path (Music Production, or no payment server yet) ---------- */
+ck('ckReqBtn').addEventListener('click', async () => {
+  if (!ckReady()) return ckGate();
+  const btn = ck('ckReqBtn'), req = CHECKOUT.requestOnly.includes(current), ref = ckRef().replace('EVX', req ? 'REQ' : 'EVX');
+  btn.disabled = true; btn.textContent = 'Sending…'; ckMsg('');
+  try {
+    await ckSendDetails(ref, (req ? 'Music Production request ' : 'Booking request ') + ref + ' — ' + ck('h-title').value.trim());
+    ckDone(req ? 'request' : 'booking-request', ref);
+  } catch(e){
+    ckMsg('Your request could not be sent. Please complete the "I am human" check again and retry, or email evoxelsounds@gmail.com.', 'bad');
+    btn.textContent = req ? 'Request details' : 'Request booking';
+    ckResetCaptcha();
+  }
+});
+
+/* ---------- PayPal path ---------- */
+let ppLoaded = null;
+function ckLoadPayPal(){
+  if (ppLoaded) return ppLoaded;
+  ppLoaded = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CHECKOUT.clientId) + '&currency=USD&intent=capture&components=buttons&disable-funding=paylater,venmo';
+    sc.dataset.namespace = 'paypalEvx';
+    sc.onload = () => { ckRenderButtons(); res(); };
+    sc.onerror = () => { ckMsg('PayPal could not be loaded. Check your connection or ad blocker and reload the page.', 'bad'); ppLoaded = null; rej(); };
+    document.head.appendChild(sc);
+  });
+  return ppLoaded;
+}
+async function ckApi(path, body){
+  const r = await fetch(CHECKOUT.api.replace(/\/$/, '') + path, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Server error');
+  return j;
+}
+let ckOrderRef = '';
+function ckRenderButtons(){
+  window.paypalEvx.Buttons({
+    style: { layout:'vertical', color:'gold', shape:'pill', label:'pay', height:48 },
+    onInit(data, actions){ ppActions = actions; ckGate(); },
+    onClick(){ if (!ckReady()){ ckGate(); ckMsg('Tick the box and complete the "I am human" check first.', 'bad'); } },
+    async createOrder(){
+      ckMsg('');
+      ckOrderRef = ckRef();
+      // details first, while the human check is still fresh; then the order with the server's price
+      try {
+        await ckSendDetails(ckOrderRef, 'New booking ' + ckOrderRef + ' — ' + SERVICES[current].name + ' — check PayPal for payment');
+      } catch(e){
+        ckMsg('Please complete the "I am human" check again, then press the PayPal button.', 'bad');
+        ckResetCaptcha();
+        throw e;
+      }
+      const o = await ckApi('/orders', {
+        service: current, options: ckChosen().map(c => c.label), ref: ckOrderRef,
+        email: ck('h-email').value.trim(), trackTitle: ck('h-title').value.trim(), artist: ck('h-artist').value.trim(),
+      });
+      return o.id;
+    },
+    async onApprove(data, actions){
+      ckMsg('Confirming your payment…');
+      try {
+        const c = await ckApi('/orders/' + data.orderID + '/capture');
+        if (c.status === 'DECLINED') return actions.restart();
+        if (c.status !== 'COMPLETED') throw new Error('not completed');
+        ckDone('paid', c.ref || ckOrderRef, c.amount);
+      } catch(e){
+        ckMsg('We could not confirm the payment. Nothing was charged if PayPal shows no payment. Email evoxelsounds@gmail.com with reference ' + ckOrderRef + ' and we will sort it out.', 'bad');
+      }
+    },
+    onCancel(){ ckMsg('Payment cancelled. Nothing was charged.'); ckResetCaptcha(); },
+    onError(){ ckMsg('Something went wrong with PayPal. Nothing was charged. Please try again, or email evoxelsounds@gmail.com.', 'bad'); ckResetCaptcha(); },
+  }).render('#ppButtons');
+}
+
+/* ---------- done ---------- */
+function ckDone(kind, ref, amount){
+  const first = escH(ck('h-name').value.trim().split(' ')[0]), email = escH(ck('h-email').value.trim()), title = escH(ck('h-title').value.trim());
+  const html = {
+    paid: '<div class="ck-ic">✓</div><h3>Payment received</h3><p>Thanks, ' + first + '. Your ' + SERVICES[current].name.toLowerCase() + ' for “' + title + '” is booked. A PayPal receipt is on its way to you.</p><span class="ck-oid">Order ' + ref + (amount ? ' · $' + amount + ' USD' : '') + '</span>' +
+          '<ol class="ck-next"><li>We check your files at the link you sent.</li><li>We confirm the delivery date by email to ' + email + '.</li><li>You get the first version, then revisions until it\'s right.</li></ol>',
+    request: '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. We\'ll reply privately to ' + email + ' within 24 hours with the details, terms and price for your project.</p><span class="ck-oid">' + ref + '</span>',
+    'booking-request': '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. We\'ll reply to ' + email + ' within 24 hours with your booking summary and a PayPal payment link.</p><span class="ck-oid">' + ref + '</span>',
+  }[kind];
+  ck('ckDone').innerHTML = html;
+  ckGo(4);
+}
+
+ckSyncPath();
+select(current);
+initCurrency();
+ckGo(1);
 
 document.getElementById('year2').textContent = new Date().getFullYear();
 
