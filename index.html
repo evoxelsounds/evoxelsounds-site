@@ -1656,7 +1656,7 @@ function ckLoadPayPal(){
   if (ppLoaded) return ppLoaded;
   ppLoaded = new Promise((res, rej) => {
     const sc = document.createElement('script');
-    sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CHECKOUT.clientId) + '&currency=USD&intent=capture&components=buttons&disable-funding=paylater,venmo&locale=en_US';
+    sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CHECKOUT.clientId) + '&currency=USD&intent=capture&components=buttons&disable-funding=paylater,venmo';
     sc.dataset.namespace = 'paypalEvx';
     sc.onload = () => { ckRenderButtons(); res(); };
     sc.onerror = () => { ckMsg('PayPal could not be loaded. Check your connection or ad blocker and reload the page.', 'bad'); ppLoaded = null; rej(); };
