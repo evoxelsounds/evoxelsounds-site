@@ -1468,7 +1468,7 @@ function update(instant){
    request by email instead (no payment), as before.
    ============================================================ */
 const CHECKOUT = {
-  api: '',                                   // Worker URL, e.g. https://evoxel-checkout.<name>.workers.dev
+  api: 'https://evoxel-checkout.evoxelshop.workers.dev',   // Cloudflare Worker (PAYPAL_ENV decides sandbox or live)
   clientId: 'BAA1XUti_SL4dhsSSXb6UYwBR8fXFxwDUA8iMk7ez4akhofmsz_r8svzIuH732nE4vII1QUuEM3S4n60mk',
   requestOnly: ['production'],               // services that send a request instead of taking payment
   web3formsKey: 'ef65894a-4d76-4e11-adb3-4e3e299bca33',
