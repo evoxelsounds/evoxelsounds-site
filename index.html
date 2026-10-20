@@ -639,6 +639,11 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .legal-links a{color:var(--text-dim);text-decoration:none}
 .legal-links a:hover{color:var(--accent)}
 .legal-note a{color:var(--accent-2);text-decoration:underline;text-underline-offset:3px}
+.agree{display:flex;gap:12px;align-items:flex-start;margin:22px 0 4px;padding:16px 18px;border:1px solid var(--border-2);border-radius:12px;background:var(--surface);cursor:pointer;color:var(--text-dim);font-size:.92rem;line-height:1.55}
+.agree input{flex:none;width:20px;height:20px;margin-top:2px;accent-color:var(--accent);cursor:pointer}
+.agree a{color:var(--accent-2);text-decoration:underline;text-underline-offset:3px}
+.agree:has(input:checked){border-color:var(--accent)}
+.agree:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .foot-bottom{align-items:center}
 .mini-foot .container{align-items:center}
 @media(max-width:640px){.legal-links{gap:10px 16px}}
@@ -926,6 +931,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     </div>
     <div class="foot-bottom"><span>© <span id="year"></span> EVOXEL SOUNDS · Holon, Israel</span>
       <div class="legal-links" role="navigation" aria-label="Legal">
+        <a href="terms.html">Terms of Service</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="refund.html">Refund Policy</a>
         <a href="accessibility.html">Accessibility Statement</a>
@@ -978,6 +984,11 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <div class="field" style="margin-bottom:0"><label for="h-message">About the project</label><textarea id="h-message" name="message" placeholder="Genre, reference tracks, deadline, and anything we should know before we start." required></textarea></div>
       </div>
 
+      <label class="agree" for="h-agree">
+        <input type="checkbox" id="h-agree" name="terms_agreed" value="Agreed to Terms of Service and Refund Policy (version October 20, 2026) and asked for work to start right away" required>
+        <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="refund.html" target="_blank" rel="noopener">Refund Policy</a>, and ask EVOXEL SOUNDS to start work once payment is confirmed. I understand payments are non-refundable after work has started.</span>
+      </label>
+
       <div class="h-captcha" data-captcha="true" data-theme="dark" style="margin:18px 0"></div>
 
       <div class="total-bar reveal">
@@ -989,7 +1000,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <button type="submit" class="pill solid btn-lg">Request booking</button>
       </div>
       <p class="form-note">No payment is taken on this page. The request is reviewed first, then a summary message arrives with file instructions and the PayPal payment link. Replies usually within 24 hours.</p>
-      <p class="form-note legal-note">By requesting a booking you agree to our <a href="refund.html">Refund Policy</a>. Payments are refundable in full until work on your project starts. See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
+      <p class="form-note legal-note">See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
       <div class="sent" id="sentMsg">Your booking request was sent. Check your inbox, the confirmation with the scope and payment link is on its way.</div>
     </form>
   </div>
@@ -1042,6 +1053,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   <div class="container">
     <span>© <span id="year2"></span> EVOXEL SOUNDS · <a href="#" data-nav="home">Back to the studio</a></span>
     <div class="legal-links" role="navigation" aria-label="Legal">
+        <a href="terms.html">Terms of Service</a>
         <a href="privacy.html">Privacy Policy</a>
         <a href="refund.html">Refund Policy</a>
         <a href="accessibility.html">Accessibility Statement</a>
