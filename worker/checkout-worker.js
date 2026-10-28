@@ -42,16 +42,21 @@ const PRICES = {
 };
 
 const ALLOWED_ORIGINS = [
-  'https://evoxelsounds.github.io',
+  'https://evoxelsounds.github.io',          // GitHub Pages copy
+  'https://evoxelsounds.pages.dev',          // Cloudflare Pages (main site)
+  'https://evoxelsounds.com',
+  'https://www.evoxelsounds.com',
   'https://evoxelmusic.com',
   'https://www.evoxelmusic.com',
 ];
+// Cloudflare Pages preview links look like https://abc123.evoxelsounds.pages.dev
+const isAllowed = o => ALLOWED_ORIGINS.includes(o) || /^https:\/\/[a-z0-9-]+\.evoxelsounds\.pages\.dev$/.test(o);
 
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const cors = {
-      'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+      'Access-Control-Allow-Origin': isAllowed(origin) ? origin : ALLOWED_ORIGINS[0],
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Vary': 'Origin',
@@ -62,7 +67,7 @@ export default {
       new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     if (request.method !== 'POST') return json({ error: 'Not found' }, 404);
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) return json({ error: 'Origin not allowed' }, 403);
+    if (origin && !isAllowed(origin)) return json({ error: 'Origin not allowed' }, 403);
 
     const url = new URL(request.url);
     try {
