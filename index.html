@@ -1079,7 +1079,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
             <div class="field"><label for="h-dead">Deadline <small>(optional)</small></label><input id="h-dead" type="date"></div>
           </div>
           <div class="field" id="ckLinkField">
-            <label for="h-link"><span id="ckLinkLabel">Link to your files</span> <small id="ckLinkOpt"></small></label>
+            <label for="h-link"><span id="ckLinkLabel">Link to your demo</span> <small id="ckLinkOpt"></small></label>
             <input id="h-link" type="url" inputmode="url" placeholder="https://www.dropbox.com/… or https://soundcloud.com/…">
             <div class="ck-srcs"><span class="ck-src" id="ckSrcDb">Dropbox</span><span class="ck-src" id="ckSrcSc">SoundCloud</span></div>
             <span class="ck-hint" id="ckLinkHint">Share a Dropbox folder with your stems, or a private SoundCloud link. Make sure anyone with the link can open it.</span>
@@ -1138,12 +1138,12 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     <div class="reveal">
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">How it works</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
-          <p>Choose the service, tell us about your track, and pay securely through PayPal. Your booking is confirmed straight away, and work starts once we have your files.</p>
+          <p>Choose the service, tell us about your track, and pay securely through PayPal. Your booking is confirmed straight away, and we contact you to plan the next steps.</p>
           <ol style="margin-top:12px">
             <li><strong>Choose the service</strong> and the options you need. The total updates as you go.</li>
-            <li><strong>Tell us about the track</strong> — title, artist, genre, references, and a Dropbox or SoundCloud link to your files.</li>
+            <li><strong>Tell us about the track</strong> — title, artist, genre, references, and a Dropbox or SoundCloud link to your demo.</li>
             <li><strong>Review and pay</strong> through PayPal, by PayPal account or card. You get an order number right away.</li>
-            <li><strong>We check your files</strong> and confirm the delivery date by email.</li>
+            <li><strong>We listen to your demo and contact you</strong> &mdash; we ask for stems if your project needs them, and tell you exactly what we need.</li>
             <li><strong>First version, then revisions</strong> until it's right.</li>
           </ol>
           <p style="margin-top:12px">Music Production works differently: send a request and we reply privately with the details, terms and price.</p>
@@ -1521,7 +1521,7 @@ function ckSyncPath(){
   ck('ckProdNote').hidden = !req;
   ck('ckBarLabel').textContent = req ? 'Starting price' : 'Total';
   ck('ckStep3').textContent = isRequest() ? 'Review & request' : 'Review & pay';
-  ck('ckLinkLabel').textContent = req ? 'Demo or reference link' : 'Link to your files';
+  ck('ckLinkLabel').textContent = req ? 'Demo or reference link' : 'Link to your demo';
   ck('ckLinkOpt').textContent = req ? '(optional)' : '';
   ck('ckLinkHint').textContent = req
     ? 'A Dropbox or SoundCloud link to a demo or reference, if you have one.'
@@ -1566,7 +1566,7 @@ function ckRenderReview(){
   ckChosen().forEach(c => rows.push(['', c.label, c.price ? '+' + usdFmt(c.price) : 'included', 1]));
   rows.push(['Track', v('h-title') + '<small>' + v('h-artist') + (v('h-genre') ? ' · ' + v('h-genre') : '') + '</small>', '', 2]);
   rows.push(['Contact', v('h-name') + '<small>' + v('h-email') + '</small>', '', 2]);
-  if (v('h-link')) rows.push([req ? 'Demo' : 'Files', v('h-link'), '', 2]);
+  if (v('h-link')) rows.push(['Demo', v('h-link'), '', 2]);
   if (ck('h-dead').value) rows.push(['Deadline', new Date(ck('h-dead').value + 'T12:00').toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }), '', 2]);
   if (v('h-message')) rows.push(['Message', v('h-message'), '', 2]);
   const local = (CUR.code !== 'USD') ? ' · about ' + CUR.fmt.format(toLocal(ckTotal())) : '';
@@ -1640,7 +1640,7 @@ async function ckSendDetails(ref, subject){
   fd.append('total', '$' + ckTotal() + ' USD' + (CUR.code !== 'USD' ? ' (shown as about ' + CUR.fmt.format(toLocal(ckTotal())) + ', ' + CUR.country + ')' : ''));
   fd.append('name', v('h-name')); fd.append('email', v('h-email')); fd.append('replyto', v('h-email'));
   fd.append('artist', v('h-artist')); fd.append('track_title', v('h-title')); fd.append('genre', v('h-genre') || '-');
-  fd.append('deadline', v('h-dead') || '-'); fd.append('files_link', v('h-link') || '-'); fd.append('message', v('h-message') || '-');
+  fd.append('deadline', v('h-dead') || '-'); fd.append('demo_link', v('h-link') || '-'); fd.append('message', v('h-message') || '-');
   fd.append('terms', CHECKOUT.requestOnly.includes(current) ? 'Request for details (no booking)' : 'Agreed to Terms of Service and Refund Policy (October 20, 2026) and asked for work to start');
   fd.append('h-captcha-response', ckCaptcha());
   const r = await fetch('https://api.web3forms.com/submit', { method:'POST', headers:{ Accept:'application/json' }, body: fd });
@@ -1737,24 +1737,22 @@ function ckDone(kind, ref, amount){
   let html;
   if (kind === 'paid'){
     const firstVersion = current === 'mastering'
-      ? (rush ? 'Within 24 hours' : 'Within 3 business days')
-      : (rush ? 'Top of the queue' : 'Within 7 business days');
+      ? (rush ? 'Within 24 hours' : 'Up to 3 business days')
+      : (rush ? 'Top of the queue' : 'Up to 7 business days');
     html = '<div class="ck-ic">✓</div><h3>Payment received</h3><p>Thanks, ' + first + '. Your ' + SERVICES[current].name.toLowerCase() + ' for “' + title + '” is booked. A PayPal receipt is on its way to you.</p><span class="ck-oid">Order ' + escH(ref) + (amount ? ' · $' + amount + ' USD' : '') + '</span>' +
       '<h4 class="ck-sub">What happens next</h4>' +
-      steps((current === 'mastering' && rush ? [
-        ['Within 24 hours', 'Your first master arrives by email at ' + email + '. If anything in your files needs attention, we\'ll email you right away.'],
-      ] : [
-        ['Within 24 hours', 'We check your files and email you at ' + email + ' to confirm your delivery date.'],
-        [firstVersion, 'Your first ' + (current === 'mastering' ? 'master' : 'mix') + ' arrives by email' + (current === 'mixing' && rush ? ', ahead of the usual 7 business days' : '') + '.'],
-      ]).concat([
+      steps([
+        ['Within 24 hours', 'We listen to your demo and contact you at ' + email + ' to go over your project.'],
+        ['Next', 'We tell you exactly what we need from you, including stems if your project needs them.'],
+        [firstVersion, 'Your first ' + (current === 'mastering' ? 'master' : 'mix') + ' arrives by email, counted from when we have everything we need' + (current === 'mixing' && rush ? ', ahead of the usual 7 business days' : '') + '.'],
         ['Then', 'Listen on a few different systems, collect all your notes into one list and send it. We revise until it\'s right.'],
-      ])) +
+      ]) +
       '<h4 class="ck-sub">Good to know</h4>' +
       faq((current === 'mixing' ? [
-        ['Should my stems keep their processing?', 'Yes. Keep your processing on, except anything on the master bus. If there\'s processing you\'re unsure about, remove it and tell us what you removed.'],
+        ['When we ask for stems, should they keep their processing?', 'Yes. Keep your processing on, except anything on the master bus. If there\'s processing you\'re unsure about, remove it and tell us what you removed.'],
       ] : []).concat([
-        ['Do I need to send anything else?', 'Not right now. If anything is missing from your files, we\'ll tell you in our confirmation email.'],
-        ['Need to change your files or add a note?', help],
+        ['Do I need to send anything else now?', 'No. When we contact you, we\'ll tell you exactly what we need, so there\'s no guesswork.'],
+        ['Want to update your demo or add a note?', help],
         ['How do revisions work?', 'Reasonable revision rounds are included. Changes that alter the foundations of the track, like a new arrangement, are quoted separately first.'],
       ])) + proof;
   } else if (kind === 'request'){
@@ -1767,7 +1765,7 @@ function ckDone(kind, ref, amount){
       ]) +
       '<h4 class="ck-sub">Good to know</h4>' +
       faq([
-        ['What should I have ready?', 'Any reference tracks you love, your demo or idea if you have one, and your release date if there is one. It helps us give you an accurate quote.'],
+        ['Do I need to send anything else now?', 'No. When we reply, we\'ll tell you exactly what we need from you.'],
         ['Is my project kept private?', 'Yes. Everything about your project, including any ghost production, is handled privately and per a separate agreement.'],
         ['Want to add something?', help],
       ]) + proof;
