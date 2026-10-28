@@ -701,8 +701,24 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .ck-done h3{font-family:var(--display);text-transform:uppercase;font-size:1.6rem;margin:0}
 .ck-done p{color:var(--text-dim);max-width:52ch;margin:10px auto 0}
 .ck-oid{display:inline-block;margin-top:14px;font:600 .9rem ui-monospace,Menlo,monospace;background:var(--bg-2);border:1px solid var(--border-2);border-radius:8px;padding:6px 10px;color:var(--text)}
-.ck-next{margin:22px auto 0;max-width:460px;text-align:left;display:grid;gap:10px;counter-reset:n;padding:0;list-style:none}
-.ck-next li{counter-increment:n;display:flex;gap:12px;color:var(--text-dim);font-size:.94rem}
+.ck-sub{font:700 .74rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:30px auto 0;max-width:500px;text-align:left}
+.ck-next{margin:12px auto 0;max-width:500px;text-align:left;display:grid;gap:12px;counter-reset:n;padding:0;list-style:none}
+.ck-next li{counter-increment:n;display:flex;gap:12px;color:var(--text-dim);font-size:.94rem;line-height:1.5}
+.ck-next li b{display:block;color:var(--text);font-weight:600}
+.ck-faq{margin:12px auto 0;max-width:500px;text-align:left;border-top:1px solid var(--border)}
+.ck-faq details{border-bottom:1px solid var(--border)}
+.ck-faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;padding:13px 2px;color:var(--text);font-weight:600;font-size:.94rem}
+.ck-faq summary::-webkit-details-marker{display:none}
+.ck-faq summary::after{content:'+';color:var(--accent);font-weight:700;transition:transform .2s}
+.ck-faq details[open] summary::after{transform:rotate(45deg)}
+.ck-faq summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ck-done .ck-faq p{margin:0 0 14px;max-width:none;font-size:.9rem;padding:0 2px}
+.ck-done a{color:var(--accent-2)}
+.ck-proof{margin:28px auto 0;max-width:500px;padding:16px 18px;border-radius:14px;background:var(--bg-2);border:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;text-align:left}
+.ck-done .ck-proof p{margin:0;flex:1 1 260px;font-size:.9rem}
+.ck-proof b{color:var(--text);font-weight:600}
+.ck-proof a{font-weight:600;font-size:.9rem;white-space:nowrap;text-decoration:none}
+.ck-proof a:hover{text-decoration:underline}
 .ck-next li::before{content:counter(n);flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);display:grid;place-items:center;font:700 .74rem var(--display)}
 .ck-panel .step-label{margin-top:30px}
 @media(max-width:640px){
@@ -1712,12 +1728,52 @@ function ckRenderButtons(){
 /* ---------- done ---------- */
 function ckDone(kind, ref, amount){
   const first = escH(ck('h-name').value.trim().split(' ')[0]), email = escH(ck('h-email').value.trim()), title = escH(ck('h-title').value.trim());
-  const html = {
-    paid: '<div class="ck-ic">✓</div><h3>Payment received</h3><p>Thanks, ' + first + '. Your ' + SERVICES[current].name.toLowerCase() + ' for “' + title + '” is booked. A PayPal receipt is on its way to you.</p><span class="ck-oid">Order ' + ref + (amount ? ' · $' + amount + ' USD' : '') + '</span>' +
-          '<ol class="ck-next"><li>We check your files at the link you sent.</li><li>We confirm the delivery date by email to ' + email + '.</li><li>You get the first version, then revisions until it\'s right.</li></ol>',
-    request: '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. We\'ll reply privately to ' + email + ' within 24 hours with the details, terms and price for your project.</p><span class="ck-oid">' + ref + '</span>',
-    'booking-request': '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. We\'ll reply to ' + email + ' within 24 hours with your booking summary and a PayPal payment link.</p><span class="ck-oid">' + ref + '</span>',
-  }[kind];
+  const rush = ckChosen().some(c => /^Rush/.test(c.label));
+  const steps = list => '<ol class="ck-next">' + list.map(x => '<li><span><b>' + x[0] + '</b>' + x[1] + '</span></li>').join('') + '</ol>';
+  const faq = list => '<div class="ck-faq">' + list.map(x => '<details><summary>' + x[0] + '</summary><p>' + x[1] + '</p></details>').join('') + '</div>';
+  const proof = '<div class="ck-proof"><p>Music from this studio has been released on <b>Armada</b>, <b>Spinnin\' Records</b> and <b>Tomorrowland Music</b>. Your track gets the same ears.</p><a href="#" data-nav="home" data-target="#work">Hear the before &amp; after &rarr;</a></div>';
+  const help = 'Reply to our email, or write to <a href="mailto:evoxelsounds@gmail.com">evoxelsounds@gmail.com</a> with your order number <b>' + escH(ref) + '</b>.';
+
+  let html;
+  if (kind === 'paid'){
+    const firstVersion = current === 'mastering'
+      ? (rush ? 'Within 24 hours' : 'Within 3 business days')
+      : (rush ? 'Top of the queue' : 'Within 7 business days');
+    html = '<div class="ck-ic">✓</div><h3>Payment received</h3><p>Thanks, ' + first + '. Your ' + SERVICES[current].name.toLowerCase() + ' for “' + title + '” is booked. A PayPal receipt is on its way to you.</p><span class="ck-oid">Order ' + escH(ref) + (amount ? ' · $' + amount + ' USD' : '') + '</span>' +
+      '<h4 class="ck-sub">What happens next</h4>' +
+      steps((current === 'mastering' && rush ? [
+        ['Within 24 hours', 'Your first master arrives by email at ' + email + '. If anything in your files needs attention, we\'ll email you right away.'],
+      ] : [
+        ['Within 24 hours', 'We check your files and email you at ' + email + ' to confirm your delivery date.'],
+        [firstVersion, 'Your first ' + (current === 'mastering' ? 'master' : 'mix') + ' arrives by email' + (current === 'mixing' && rush ? ', ahead of the usual 7 business days' : '') + '.'],
+      ]).concat([
+        ['Then', 'Listen on a few different systems, collect all your notes into one list and send it. We revise until it\'s right.'],
+      ])) +
+      '<h4 class="ck-sub">Good to know</h4>' +
+      faq((current === 'mixing' ? [
+        ['Should my stems keep their processing?', 'Yes. Keep your processing on, except anything on the master bus. If there\'s processing you\'re unsure about, remove it and tell us what you removed.'],
+      ] : []).concat([
+        ['Do I need to send anything else?', 'Not right now. If anything is missing from your files, we\'ll tell you in our confirmation email.'],
+        ['Need to change your files or add a note?', help],
+        ['How do revisions work?', 'Reasonable revision rounds are included. Changes that alter the foundations of the track, like a new arrangement, are quoted separately first.'],
+      ])) + proof;
+  } else if (kind === 'request'){
+    html = '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. Your request for “' + title + '” is with us.</p><span class="ck-oid">' + escH(ref) + '</span>' +
+      '<h4 class="ck-sub">What happens next</h4>' +
+      steps([
+        ['Within 24 hours', 'We reply privately to ' + email + ' with the details, terms and price for your project.'],
+        ['Once you agree', 'We lock in the plan and start work.'],
+        ['Typically 12–20 business days', 'From the start of work to your first version, depending on scope.'],
+      ]) +
+      '<h4 class="ck-sub">Good to know</h4>' +
+      faq([
+        ['What should I have ready?', 'Any reference tracks you love, your demo or idea if you have one, and your release date if there is one. It helps us give you an accurate quote.'],
+        ['Is my project kept private?', 'Yes. Everything about your project, including any ghost production, is handled privately and per a separate agreement.'],
+        ['Want to add something?', help],
+      ]) + proof;
+  } else {
+    html = '<div class="ck-ic">✓</div><h3>Request sent</h3><p>Thanks, ' + first + '. We\'ll reply to ' + email + ' within 24 hours with your booking summary and a PayPal payment link.</p><span class="ck-oid">' + escH(ref) + '</span>' + proof;
+  }
   ck('ckDone').innerHTML = html;
   ckGo(4);
 }
