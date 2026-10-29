@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="assets/pages.css">
 <link rel="stylesheet" href="assets/a11y.css">
 <script src="assets/a11y.js"></script>
+<script src="assets/consent.js" defer></script>
 </head>
 <body>
 <header class="pg-head">
@@ -32,14 +33,14 @@
     <div class="container"><div class="doc-wrap">
       <p class="eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
-      <p class="meta">Last updated: October 20, 2026</p>
+      <p class="meta">Last updated: October 29, 2026</p>
       <p class="intro">This policy explains what personal information EVOXEL SOUNDS collects when you visit this website or work with us, why we collect it, who we share it with, and the choices you have. We keep it short because we collect very little.</p>
 
       <div class="summary">
         <h2>The short version</h2>
         <ul>
           <li>We only collect what you send us in a form or message, plus basic technical data any website receives.</li>
-          <li>No advertising cookies, no tracking pixels, no analytics profiles.</li>
+          <li>We use one advertising tool, the Meta Pixel, to measure how our ads perform. You can switch it off at any time, and where the law requires it, it runs only if you accept.</li>
           <li>Your music and project files are confidential. We never share or release them without your permission.</li>
           <li>We never sell your personal information.</li>
           <li>You can ask us to see, correct or delete your data at any time.</li>
@@ -73,7 +74,8 @@
         <h3>Information collected automatically</h3>
         <ul class="list">
           <li><strong>Technical data:</strong> like every website, our host receives your IP address, browser type and the pages you request, and keeps these in short-lived server logs.</li>
-          <li><strong>Approximate country:</strong> to show prices in your local currency, your browser asks a geolocation service which country your IP address is in. We use only the country code, in your browser, and we do not store it.</li>
+          <li><strong>Approximate country:</strong> to show prices in your local currency and to know whether to ask for your cookie consent, your browser asks a geolocation service which country your IP address is in. We use only the country code, in your browser, and we do not store it.</li>
+          <li><strong>Ad measurement:</strong> if the Meta Pixel is on (see section 6), it records which pages of this site you visit, whether you start a booking or send a request, and the amount of a completed payment. Meta receives this together with your IP address, browser details and its own cookie identifiers, and may link it to your Facebook or Instagram account. We do not send Meta your name, email address, messages or files.</li>
         </ul>
         <p>We do not collect special categories of data (such as health or political views), and we ask that you don't send them.</p>
       </section>
@@ -88,10 +90,11 @@
             <tr><td>Take payment and keep records</td><td>Payment confirmation, invoice details</td><td>Legal obligation (tax and accounting)</td></tr>
             <tr><td>Show prices in your currency</td><td>Approximate country</td><td>Legitimate interest in a clear price display</td></tr>
             <tr><td>Keep the site secure and working</td><td>Technical data, spam check results</td><td>Legitimate interest in security</td></tr>
+            <tr><td>Measure and improve our ads</td><td>Ad measurement data (section 2)</td><td>Your consent where the law requires it; otherwise our legitimate interest in knowing which ads work. You can switch it off at any time</td></tr>
             <tr><td>Show your track in our portfolio</td><td>Track name, artist name, audio excerpts</td><td>Your consent, which you can withdraw</td></tr>
           </tbody>
         </table></div>
-        <p style="margin-top:14px">We do not use your information for automated decisions, profiling or advertising. We will only email you about your enquiry or project, never a marketing list you didn't ask to join.</p>
+        <p style="margin-top:14px">We do not make automated decisions about you. Meta may use the ad measurement data to show you our ads and measure them, under its own policies. We will only email you about your enquiry or project, never a marketing list you didn't ask to join.</p>
       </section>
 
       <section id="files">
@@ -115,7 +118,8 @@
             <tr><td>hCaptcha</td><td>Blocks spam on the booking form</td><td>Device and interaction data, IP address</td></tr>
             <tr><td>PayPal</td><td>Processes payments</td><td>Payment and account details you give PayPal</td></tr>
             <tr><td>Google (Gmail)</td><td>Our email</td><td>Your messages and contact details</td></tr>
-            <tr><td>GitHub Pages</td><td>Hosts this website</td><td>IP address and request logs</td></tr>
+            <tr><td>Cloudflare, GitHub</td><td>Host this website and our checkout server</td><td>IP address, request logs, and order details passed to PayPal</td></tr>
+            <tr><td>Meta Platforms (Meta Pixel)</td><td>Measures our ads, when switched on</td><td>Ad measurement data, IP address, cookie identifiers</td></tr>
             <tr><td>Google Fonts</td><td>Serves the site's typefaces</td><td>IP address</td></tr>
             <tr><td>Country lookup (country.is, GeoJS, ipwho.is, ipapi.co)</td><td>Finds your country for currency display</td><td>IP address</td></tr>
             <tr><td>Spotify, SoundCloud</td><td>Show release artwork and open tracks</td><td>IP address; their own policies apply once you click through</td></tr>
@@ -126,10 +130,19 @@
 
       <section id="cookies">
         <h2>6. Cookies and browser storage</h2>
-        <p>This website does not use advertising or analytics cookies. It saves a few small preferences in your browser's local storage, which never leave your device:</p>
+        <h3>Advertising cookie: Meta Pixel</h3>
+        <p>We use one optional advertising tool, the Meta Pixel, which sets cookies so Meta can measure how our ads perform.</p>
+        <ul class="list">
+          <li><strong>In the EU, EEA, UK and Switzerland</strong>, and whenever we can't tell where you are, we ask first. The Pixel loads only after you click <strong>Accept</strong> in the cookie banner. If you click <strong>Reject</strong> or ignore the banner, it never loads.</li>
+          <li><strong>Everywhere else</strong>, the Pixel is on by default and you can switch it off.</li>
+        </ul>
+        <p>You can change your choice at any time with the <button type="button" class="cookie-open inline" data-cookie-settings>Cookie settings</button> link at the bottom of every page. Switching it off stops future measurement. It does not undo data Meta already received, which Meta handles under its own <a href="https://www.facebook.com/privacy/policy" target="_blank" rel="noopener">Privacy Policy</a>. You can also manage ad preferences in your Facebook or Instagram settings.</p>
+        <h3>Preferences saved on your device</h3>
+        <p>We save a few small preferences in your browser's local storage, which never leave your device:</p>
         <ul class="list">
           <li>Currency exchange rates, refreshed every 12 hours, so prices load quickly.</li>
           <li>Your accessibility settings, such as text size or high contrast, if you change them.</li>
+          <li>Your cookie choice, kept for 12 months, after which we ask again.</li>
         </ul>
         <p>Third-party services listed above, such as hCaptcha, may set their own cookies needed for them to work. You can clear stored data or block cookies in your browser settings at any time. The site keeps working, though some features may reset.</p>
       </section>
@@ -141,6 +154,7 @@
           <li><strong>Project files and sessions:</strong> up to 12 months after final delivery, so revisions and re-delivery remain possible, then deleted. Ask us and we will delete them sooner.</li>
           <li><strong>Invoices and payment records:</strong> for as long as Israeli tax law requires, currently up to 7 years.</li>
           <li><strong>Server logs held by our host:</strong> for the short period set by the host.</li>
+          <li><strong>Ad measurement data:</strong> held by Meta under its own retention rules. Your cookie choice stays in your browser for 12 months.</li>
         </ul>
       </section>
 
@@ -155,12 +169,13 @@
           <li>Receive your information in a portable format.</li>
         </ul>
         <p>To use any of these rights, email <a href="mailto:evoxelsounds@gmail.com">evoxelsounds@gmail.com</a>. We reply within 30 days and may need to confirm your identity first. We will never treat you differently for using your rights.</p>
+        <p>To switch off the Meta Pixel or withdraw cookie consent, use <button type="button" class="cookie-open inline" data-cookie-settings>Cookie settings</button> at the bottom of any page. No email needed.</p>
         <p>If you are unhappy with how we handled your data, please tell us first so we can fix it. You can also complain to the Israeli Privacy Protection Authority, or to the data protection authority in your own country.</p>
       </section>
 
       <section id="transfers">
         <h2>9. International transfers</h2>
-        <p>We are based in Israel, which the European Commission recognises as providing an adequate level of data protection. Some of the services we use store data in other countries, including the United States. Where that happens, we rely on those providers' standard safeguards, such as Standard Contractual Clauses, to protect your information.</p>
+        <p>We are based in Israel, which the European Commission recognises as providing an adequate level of data protection. Some of the services we use store data in other countries, including the United States. Where that happens, we rely on those providers' standard safeguards, such as Standard Contractual Clauses, to protect your information. Meta is certified under the EU&ndash;US Data Privacy Framework.</p>
       </section>
 
       <section id="security">
@@ -200,6 +215,7 @@
         <a href="privacy.html" aria-current="page">Privacy Policy</a>
         <a href="refund.html">Refund Policy</a>
         <a href="accessibility.html">Accessibility Statement</a>
+        <button type="button" class="cookie-open" data-cookie-settings>Cookie settings</button>
         <button type="button" class="a11y-open" data-a11y-open><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6.8" r="1.4" fill="currentColor" stroke="none"/><path d="M7 9.5l5 1 5-1M12 10.5v3.5l-2.5 4.5M12 14l2.5 4.5"/></svg>Accessibility options</button>
     </div>
   </div>

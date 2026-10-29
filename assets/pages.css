@@ -74,6 +74,11 @@ main{flex:1;position:relative;z-index:1}
 .legal-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
 .legal-links a{color:var(--text-dim);text-decoration:none}
 .legal-links a:hover,.legal-links a[aria-current="page"]{color:var(--accent)}
+.cookie-open{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.cookie-open:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.cookie-open.inline{color:var(--accent-2);text-decoration:underline;text-underline-offset:3px}
+.legal-links .cookie-open{color:var(--text-dim)}
+.legal-links .cookie-open:hover{color:var(--accent)}
 
 @media(max-width:600px){
   .pg-head nav{height:64px}
@@ -82,3 +87,4 @@ main{flex:1;position:relative;z-index:1}
   .summary{padding:18px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.doc .list + p{margin-top:14px}
