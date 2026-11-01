@@ -909,7 +909,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
     <div class="abp-status" id="abp-status" aria-live="polite" hidden></div>
 
     <div class="abp-foot">
-      <span>The unmastered version is gain matched, so you judge the sound, not the volume.</span>
+      <span>Both versions are gain matched by true peak (dBTP). Mastering also raises loudness, so the mastered version can still sound a little louder &mdash; listen for the tone, depth and clarity.</span>
     </div>
   </div>
     </div>
@@ -1915,7 +1915,7 @@ const sel = $('abp-trackSel'), playBtn = $('abp-playBtn'), playIcon = $('abp-pla
 
 TRACKS.forEach((t,i) => {
   const o = document.createElement('option');
-  o.value = i; o.textContent = t.artist + ' – ' + t.title + '  ·  ' + t.genre + (t.before ? '' : ' (coming soon)'); o.disabled = !t.before;
+  o.value = i; o.textContent = (t.artist ? t.artist + ' – ' : '') + t.title + '  ·  ' + t.genre + (t.before ? '' : ' (coming soon)'); o.disabled = !t.before;
   sel.appendChild(o);
 });
 
@@ -2177,8 +2177,8 @@ function syncHeader(i){
   const pad = n => String(n).padStart(2,'0');
   $('abp-tNum').textContent = pad(i + 1) + ' / ' + pad(TRACKS.length);
   const tn = $('abp-tName'); tn.textContent = '';
-  const ar = document.createElement('span'); ar.className = 'abp-tartist'; ar.textContent = TRACKS[i].artist;
-  tn.append(ar, TRACKS[i].title);
+  if (TRACKS[i].artist){ const ar = document.createElement('span'); ar.className = 'abp-tartist'; ar.textContent = TRACKS[i].artist; tn.append(ar); }
+  tn.append(TRACKS[i].title);
   $('abp-tGenre').textContent = TRACKS[i].genre || '';
   sel.value = i;
   const k = ready.indexOf(i);
