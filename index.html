@@ -134,6 +134,14 @@ nav{display:flex;align-items:center;justify-content:space-between;height:78px;ga
 .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
 .hero-bg{position:absolute;inset:0;z-index:-2;background-image:var(--img-hero);background-size:cover;background-position:center 74%;transform:scale(1.06);animation:kenburns 22s ease-in-out infinite alternate}
 .hero-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,7,11,.55),rgba(8,7,11,.78) 55%,var(--bg)),radial-gradient(110% 80% at 50% 0%,transparent,rgba(8,7,11,.4))}
+.hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease}
+.hero-vid.on{opacity:1}
+.hero-vid-btn{position:absolute;z-index:3;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:rgba(0,0,0,.25);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.8);transition:color .2s,border-color .2s}
+.hero-vid-btn:hover{color:#e6a23c;border-color:#e6a23c}
+.hero-vid-btn:focus-visible{outline:2px solid #e6a23c;outline-offset:3px}
+.hero-vid-btn svg{width:15px;height:15px;fill:currentColor}
+.hero-vid-btn[hidden]{display:none}
 @keyframes kenburns{from{transform:scale(1.06) translateY(0)}to{transform:scale(1.14) translateY(-2%)}}
 .hero-inner{padding:120px 26px 90px;max-width:1000px;position:relative}
 .hero h1{font-family:var(--display);font-weight:900;font-size:clamp(2.8rem,8.5vw,6.6rem);line-height:.95;letter-spacing:-.025em;text-transform:uppercase}
@@ -778,7 +786,8 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 
 <!-- HERO -->
 <section class="hero" id="home">
-  <div class="hero-bg"></div>
+  <div class="hero-bg"><video class="hero-vid" id="heroVid" muted playsinline loop preload="none" aria-hidden="true" tabindex="-1" disablepictureinpicture></video></div>
+  <button type="button" class="hero-vid-btn" id="heroVidBtn" hidden aria-label="Pause background video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg></button>
   <div class="hero-inner">
     <h1 class="hero-anim">Elevate <span class="b">your productions</span>.</h1>
     <p class="hero-anim">Setting the standard for professional sound. A two-engineer company for production, mixing and mastering of electronic music, from a first idea to a release-ready master.</p>
@@ -1814,6 +1823,45 @@ fqs.forEach(f => f.querySelector('.fq-head').addEventListener('click', () => {
   fqs.forEach(o => o.classList.remove('open'));
   if (opening) f.classList.add('open');
 }));
+
+/* ===== hero background video =====
+   The photo shows first. The video loads only after the page has finished
+   loading, and never on Save-Data / very slow connections, with reduced motion,
+   or with "Stop animations" on. It pauses when the hero is off screen. */
+(function(){
+  const v = document.getElementById('heroVid'), btn = document.getElementById('heroVidBtn');
+  if (!v || !v.play) return;
+  const PAUSE_ICON = btn.innerHTML;
+  const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+  const html = document.documentElement;
+  const conn = navigator.connection || {};
+  const blocked = () => matchMedia('(prefers-reduced-motion: reduce)').matches || html.classList.contains('a11y-still');
+  if (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')) return;
+  let userPaused = false, visible = true, started = false;
+  function setBtn(){ const paused = v.paused; btn.innerHTML = paused ? PLAY_ICON : PAUSE_ICON; btn.setAttribute('aria-label', paused ? 'Play background video' : 'Pause background video'); }
+  function sync(){
+    if (!started) return;
+    if (blocked()){ v.pause(); v.classList.remove('on'); btn.hidden = true; return; }
+    btn.hidden = false;
+    if (visible && !userPaused && !document.hidden) v.play().catch(()=>{}); else v.pause();
+    if (!userPaused) v.classList.add('on');
+    setBtn();
+  }
+  function start(){
+    if (started || blocked()) return;
+    started = true;
+    v.src = matchMedia('(max-aspect-ratio: 1/1)').matches ? 'assets/video/hero-mobile.mp4' : 'assets/video/hero-desktop.mp4';
+    v.addEventListener('playing', () => { if (!userPaused) v.classList.add('on'); setBtn(); });
+    v.addEventListener('pause', setBtn);
+    sync();
+  }
+  btn.addEventListener('click', () => { userPaused = !v.paused ? true : false; if (userPaused) v.pause(); else v.play().catch(()=>{}); setBtn(); });
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; sync(); }).observe(v.closest('.hero'));
+  document.addEventListener('visibilitychange', sync);
+  new MutationObserver(() => { if (!started) start(); sync(); }).observe(html, { attributes: true, attributeFilter: ['class'] });
+  const later = () => (window.requestIdleCallback ? requestIdleCallback(start, { timeout: 2500 }) : setTimeout(start, 800));
+  if (document.readyState === 'complete') later(); else addEventListener('load', later);
+})();
 
 /* ===== view router with curtain transition ===== */
 function safeReplace(url){ try { history.replaceState(null, '', url); } catch(e){} }
