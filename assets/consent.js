@@ -85,7 +85,7 @@
     box.className = 'evx-ck'; box.hidden = true;
     box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Cookie choice');
     box.innerHTML =
-      '<p id="evxCkText"><b>One cookie, your call.</b> We use the Meta Pixel to measure how our ads perform. You can say no, and change your mind any time. <a href="privacy.html#cookies">Privacy Policy</a></p>' +
+      '<p id="evxCkText"><b>Ad cookies, your call.</b> We use the Meta Pixel to measure our ads and to show them to people likely to be interested. Meta receives what you do here, including bookings. You can say no, and change your mind any time. <a href="privacy.html#cookies">Privacy Policy</a></p>' +
       '<div class="evx-ck-btns"><button type="button" data-ck="reject">Reject</button><button type="button" data-ck="accept">Accept</button></div>';
     box.addEventListener('click', function(e){
       var b = e.target.closest('[data-ck]'); if (!b) return;
