@@ -10,6 +10,8 @@
                                     price list below and creates a
                                     PayPal order
    - POST /orders/{id}/capture    → takes the payment and checks it
+   - POST /webhook                → PayPal tells us a payment changed
+                                    (paid, refunded, …); see below
 
    The browser never decides the price or the order number, so
    neither can be tampered with.
@@ -20,7 +22,11 @@
    - Every order is kept in the "orders" table with its status:
        reserved  number given, customer is at the payment step
        pending   PayPal order created, waiting for payment
+       payment_pending  paid, but PayPal is still checking the payment
        paid      payment captured
+       failed    payment was declined
+       partially_refunded / refunded   money (partly) given back
+       reversed  money taken back by the buyer's bank (chargeback)
        received  Music Production request (no payment)
    - Numbers of checkouts that were never paid stay "reserved" or
      "pending" and are not reused.
@@ -91,6 +97,7 @@ export default {
 
     const url = new URL(request.url);
     try {
+      if (url.pathname === '/webhook') return json(await handleWebhook(await request.json().catch(() => ({})), env));
       if (url.pathname === '/ref') return json(await newRef(await request.json(), env));
       if (url.pathname === '/orders') return json(await createOrder(await request.json(), env));
       const m = url.pathname.match(/^\/orders\/([A-Z0-9]+)\/capture$/);
@@ -267,30 +274,23 @@ async function captureOrder(orderId, env) {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
   });
-  const data = await r.json();
+  let data = await r.json();
 
   // card declined or similar: let the buyer try another way
   const issue = data.details && data.details[0] && data.details[0].issue;
   if (issue === 'INSTRUMENT_DECLINED') return { status: 'DECLINED' };
-  if (!r.ok) throw httpError(502, (data.details && data.details[0] && data.details[0].description) || 'Payment could not be completed');
+  if (issue === 'ORDER_ALREADY_CAPTURED') {
+    // already taken, for example by the PayPal notification a moment earlier: read the order instead
+    data = await getOrder(orderId, env, token);
+    if (!data) throw httpError(502, 'Payment could not be completed');
+  } else if (!r.ok) {
+    throw httpError(502, (data.details && data.details[0] && data.details[0].description) || 'Payment could not be completed');
+  }
+
+  await syncOrder(data, env);
 
   const unit = data.purchase_units && data.purchase_units[0];
   const cap = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
-
-  // the payment is already taken here, so a database problem must not turn it into an error
-  if (data.status === 'COMPLETED') {
-    try {
-      const DB = await database(env);
-      if (DB) {
-        const t = now();
-        await DB.prepare(`UPDATE orders SET status = 'paid', capture_id = ?2, amount_paid = ?3, payer_email = ?4,
-                            paid_at = ?5, updated_at = ?5 WHERE paypal_order_id = ?1`)
-          .bind(orderId, (cap && cap.id) || null, cap && cap.amount ? Number(cap.amount.value) : null,
-                (data.payer && data.payer.email_address) || null, t).run();
-      }
-    } catch (err) { console.error('could not mark order paid', orderId, err); }
-  }
-
   return {
     status: data.status,                       // COMPLETED when paid
     captureId: cap && cap.id,
@@ -298,4 +298,112 @@ async function captureOrder(orderId, env) {
     ref: unit && unit.reference_id,
     payerEmail: data.payer && data.payer.email_address,
   };
+}
+
+// a PayPal order straight from PayPal; null when PayPal has no such order
+async function getOrder(orderId, env, token) {
+  const r = await fetch(apiBase(env) + '/v2/checkout/orders/' + encodeURIComponent(orderId), {
+    headers: { 'Authorization': 'Bearer ' + (token || await accessToken(env)) },
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw httpError(502, 'Could not read the order from PayPal');
+  return r.json();
+}
+
+/* ---------- order status in the database ---------- */
+// PayPal payment state → our order status
+const CAPTURE_STATUS = {
+  COMPLETED: 'paid',
+  PENDING: 'payment_pending',          // PayPal is still checking the payment
+  PARTIALLY_REFUNDED: 'partially_refunded',
+  REFUNDED: 'refunded',
+  REVERSED: 'reversed',                // taken back, e.g. a chargeback
+  DECLINED: 'failed',
+  FAILED: 'failed',
+};
+// a status only moves forward, so notifications arriving out of order can't undo a later one
+const STATUS_RANK = { reserved: 0, pending: 1, payment_pending: 2, failed: 3, paid: 4, partially_refunded: 5, refunded: 6, reversed: 6 };
+
+// writes what PayPal says about an order into the database. The payment may already be
+// taken when this runs, so a database problem is logged and never turned into an error.
+async function syncOrder(order, env) {
+  try {
+    const unit = order && order.purchase_units && order.purchase_units[0];
+    const cap = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
+    const status = cap && CAPTURE_STATUS[cap.status];
+    if (!status) return;
+    const DB = await database(env);
+    if (!DB) return;
+
+    const t = now();
+    const paidAt = status === 'payment_pending' || status === 'failed' ? null : (cap.create_time || t);
+    const amount = cap.amount ? Number(cap.amount.value) : null;
+    const payer = (order.payer && order.payer.email_address) || null;
+    const row = await DB.prepare(`SELECT status FROM orders WHERE paypal_order_id = ?1`).bind(order.id).first();
+
+    if (row) {
+      if ((STATUS_RANK[status] || 0) <= (STATUS_RANK[row.status] || 0)) return;
+      await DB.prepare(`UPDATE orders SET status = ?2, capture_id = ?3, amount_paid = ?4, payer_email = COALESCE(?5, payer_email),
+                          paid_at = COALESCE(paid_at, ?6), updated_at = ?7 WHERE paypal_order_id = ?1`)
+        .bind(order.id, status, cap.id || null, amount, payer, paidAt, t).run();
+    } else {
+      // an order this database never saw (its number came from the fallback): keep it anyway
+      await DB.prepare(`INSERT OR IGNORE INTO orders (ref, kind, status, service, email, total, paypal_order_id, capture_id,
+                          amount_paid, payer_email, created_at, updated_at, paid_at)
+                        VALUES (?1, 'booking', ?2, ?3, ?4, ?5, ?6, ?7, ?5, ?8, ?9, ?9, ?10)`)
+        .bind(clip(unit.reference_id || unit.invoice_id || order.id, 40), status, clip(unit.description, 127) || null,
+              clip(unit.custom_id, 127) || null, amount, order.id, cap.id || null, payer, t, paidAt).run();
+    }
+  } catch (err) {
+    console.error('could not record payment for PayPal order', order && order.id, err);
+  }
+}
+
+/* ---------- PayPal notifications (webhook) ----------
+   PayPal calls POST /webhook when a payment changes. The message itself
+   is never trusted: the order is always read again from PayPal with our
+   own credentials, so a forged message can't mark anything paid.
+
+   Events to subscribe to in the PayPal app:
+     CHECKOUT.ORDER.APPROVED       buyer approved; take the money even if
+                                   they closed the page before the site did
+     PAYMENT.CAPTURE.COMPLETED     paid
+     PAYMENT.CAPTURE.PENDING       PayPal is still checking the payment
+     PAYMENT.CAPTURE.DENIED        payment failed
+     PAYMENT.CAPTURE.REFUNDED      refunded (fully or partly)
+     PAYMENT.CAPTURE.REVERSED      taken back, e.g. a chargeback
+   ---------------------------------------------------- */
+async function handleWebhook(event, env) {
+  const type = (event && event.event_type) || '';
+  const res = (event && event.resource) || {};
+  const token = await accessToken(env);
+  let orderId = null;
+
+  if (type === 'CHECKOUT.ORDER.APPROVED' && res.id) {
+    try {
+      await captureOrder(res.id, env);
+      return { ok: true, captured: res.id };
+    } catch (err) {
+      orderId = res.id;                 // could not capture: just record whatever state it is in
+    }
+  } else if (type.startsWith('PAYMENT.CAPTURE.')) {
+    orderId = res.supplementary_data && res.supplementary_data.related_ids && res.supplementary_data.related_ids.order_id;
+    if (!orderId) {
+      // a refund points to its capture, and the capture knows the order
+      const up = (res.links || []).find(l => l.rel === 'up' && typeof l.href === 'string');
+      if (up && up.href.startsWith(apiBase(env) + '/v2/payments/captures/')) {
+        const r = await fetch(up.href, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (r.ok) {
+          const c = await r.json();
+          orderId = c.supplementary_data && c.supplementary_data.related_ids && c.supplementary_data.related_ids.order_id;
+        }
+      }
+    }
+  }
+  if (!orderId) return { ok: true, ignored: type };
+
+  const order = await getOrder(orderId, env, token);
+  if (!order) return { ok: true, ignored: 'unknown order' };
+  await syncOrder(order, env);
+  return { ok: true, synced: order.id };
 }
