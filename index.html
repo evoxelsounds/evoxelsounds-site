@@ -415,7 +415,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   .pick .pn{font-size:.88rem}
 }
 @media(max-width:400px){
-  .pick-grid{grid-template-columns:1fr}
+  .pick-grid{grid-template-columns:minmax(0,1fr)}
   .pick{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 16px}
   .pick svg{margin:0;flex:none}
   .pick .pn{flex:1}
@@ -438,15 +438,16 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   --border:rgba(230,180,120,.15); --border-2:rgba(230,180,120,.30);
 }
 .step-label{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:46px 0 16px}
-.pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .pick{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:18px 14px;text-align:center;cursor:pointer;transition:border-color .3s var(--ease),transform .3s var(--ease),background .3s;font-family:var(--body);color:var(--text)}
 .pick:hover{transform:translateY(-3px);border-color:var(--border-2)}
 .pick.sel{border-color:var(--accent);background:linear-gradient(180deg,rgba(230,162,60,.12),var(--surface));box-shadow:0 14px 40px -22px var(--accent)}
 .pick svg{width:28px;height:28px;stroke:var(--accent);fill:none;stroke-width:1.6;margin:0 auto 10px;display:block}
 .pick .pn{font-family:var(--display);font-weight:800;font-size:.98rem;text-transform:uppercase;line-height:1.15;letter-spacing:.01em;color:#fff}
 .pick .pd{color:var(--text-dim);font-size:.78rem;margin-top:6px;line-height:1.4}
-@media(max-width:900px){.pick-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.pick-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:400px){.pick-grid{grid-template-columns:minmax(0,1fr)}}   /* phones: one card per row (after the rules above so it wins) */
 
 /* included info + flat options — no nested boxes */
 .conf-flat{margin-top:8px;padding:6px 2px 0}
@@ -1473,7 +1474,8 @@ function select(slug){
   current = slug;
   document.querySelectorAll('.pick').forEach(p => p.classList.toggle('sel', p.dataset.slug === slug));
   renderConf();
-  if (location.hash.startsWith('#hire')) safeReplace('#hire?service=' + slug);
+  // only while the booking page is showing, so the page's own first select can't overwrite a link to a service
+  if (location.hash.startsWith('#hire') && !document.getElementById('view-hire').hidden) safeReplace('#hire?service=' + slug);
 }
 
 function renderConf(){
