@@ -1570,7 +1570,32 @@ function ckSyncPath(){
     : 'Share a Dropbox folder with your stems, or a private SoundCloud link. Make sure anyone with the link can open it.';
 }
 const _select = select;
-select = function(slug){ _select(slug); ckSyncPath(); };
+select = function(slug){ _select(slug); ckSyncPath(); ckTrackView(); };
+
+/* ---------- Meta Pixel: steps of the booking funnel ----------
+   ViewContent      a service is shown on the booking page
+   AddToCart        service and options chosen, moved on to the details step
+   InitiateCheckout details filled in, reached the review and payment step
+   AddPaymentInfo   pressed the PayPal button
+   Purchase / Lead  paid, or sent a Music Production request
+   Each step is sent once per service per visit. Nothing is sent without
+   cookie consent (evxTrack checks that). */
+const ckFired = new Set();
+function ckPixel(name){
+  if (!window.evxTrack) return;
+  const key = name + ':' + current;
+  if (ckFired.has(key)) return;
+  ckFired.add(key);
+  const req = CHECKOUT.requestOnly.includes(current);
+  evxTrack(name, Object.assign(
+    { content_name: SERVICES[current].name, content_ids: [current], content_type: 'product', content_category: req ? 'Request' : 'Booking' },
+    req ? {} : { value: ckTotal(), currency: 'USD' }
+  ));
+}
+function ckTrackView(){
+  const v = document.getElementById('view-hire');
+  if (v && !v.hidden && ckStep === 1) ckPixel('ViewContent');
+}
 
 /* ---------- link: Dropbox or SoundCloud only ---------- */
 function ckLinkHost(v){
@@ -1629,11 +1654,11 @@ function ckRenderReview(){
 }
 
 /* ---------- step navigation ---------- */
-let ckStarted = false;
 function ckGo(n){
   if (n === 3 && ckStep < 3 && !ckValidate()){ if (ckStep !== 2) ckGo(2); return; }
+  if (n === 2 && ckStep === 1) ckPixel('AddToCart');
+  if (n === 3 && ckStep < 3) ckPixel('InitiateCheckout');
   ckStep = n;
-  if (n === 3 && !ckStarted && !CHECKOUT.requestOnly.includes(current) && window.evxTrack) (ckStarted = true, evxTrack('InitiateCheckout', { value: ckTotal(), currency: 'USD', content_name: SERVICES[current].name }));
   [1,2,3,4].forEach(i => ck('ck' + i).hidden = i !== n);
   document.querySelectorAll('#ckSteps li').forEach(li => {
     const k = +li.dataset.s;
@@ -1763,6 +1788,7 @@ function ckRenderButtons(){
     onClick(){ if (!ckReady()){ ckGate(); ckMsg('Tick the box and complete the "I am human" check first.', 'bad'); } },
     async createOrder(){
       ckBusy('Your payment is in progress.');
+      ckPixel('AddPaymentInfo');
       // one order number per checkout: trying again after a cancel keeps the same number
       if (!ckOrderRef) ckOrderRef = await ckNewRef('booking');
       // details first, while the human check is still fresh; then the order with the server's price
@@ -1803,8 +1829,9 @@ function ckRenderButtons(){
 /* ---------- done ---------- */
 function ckDone(kind, ref, amount){
   if (window.evxTrack){
-    if (kind === 'paid') evxTrack('Purchase', { value: +amount || ckTotal(), currency: 'USD', content_name: SERVICES[current].name });
-    else evxTrack('Lead', { content_name: SERVICES[current].name });
+    const base = { content_name: SERVICES[current].name, content_ids: [current], content_type: 'product' };
+    if (kind === 'paid') evxTrack('Purchase', Object.assign(base, { value: +amount || ckTotal(), currency: 'USD' }));
+    else evxTrack('Lead', base);
   }
   const first = escH(ck('h-name').value.trim().split(' ')[0]), email = escH(ck('h-email').value.trim()), title = escH(ck('h-title').value.trim());
   const rush = ckChosen().some(c => /^Rush/.test(c.label));
@@ -1918,7 +1945,7 @@ const vHome = document.getElementById('view-home'),
 let curView = 'home', homeScroll = 0, busy = false;
 const noMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function showView(v){ vHome.hidden = v !== 'home'; vHire.hidden = v !== 'hire'; curView = v; }
+function showView(v){ vHome.hidden = v !== 'home'; vHire.hidden = v !== 'hire'; curView = v; if (v === 'hire') ckTrackView(); }
 
 function go(view, opts = {}){
   if (busy) return;
