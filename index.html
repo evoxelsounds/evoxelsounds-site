@@ -1686,16 +1686,28 @@ async function ckSendDetails(ref, subject){
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.success) throw new Error(j.message || 'send failed');
 }
-const ckRef = () => 'EVX-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+// order numbers come from the checkout server (EVX-1001, REQ-1001, …), which counts them up so none repeats;
+// the random one is only a fallback for when the server can't be reached
+const ckFallbackRef = prefix => prefix + '-' + Array.from(crypto.getRandomValues(new Uint8Array(8)), b => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 34]).join('');
+async function ckNewRef(kind){
+  const prefix = kind === 'request' ? 'REQ' : 'EVX';
+  if (!CHECKOUT.api) return ckFallbackRef(prefix);
+  try {
+    const j = await ckApi('/ref', { kind, service: current, email: ck('h-email').value.trim(), trackTitle: ck('h-title').value.trim(), artist: ck('h-artist').value.trim() });
+    if (j.ref) return j.ref;
+  } catch(e){}
+  return ckFallbackRef(prefix);
+}
 
 function ckResetCaptcha(){ try { window.hcaptcha && window.hcaptcha.reset(); } catch(e){} ckGate(); }
 
 /* ---------- request path (Music Production, or no payment server yet) ---------- */
 ck('ckReqBtn').addEventListener('click', async () => {
   if (!ckReady()) return ckGate();
-  const btn = ck('ckReqBtn'), req = CHECKOUT.requestOnly.includes(current), ref = ckRef().replace('EVX', req ? 'REQ' : 'EVX');
+  const btn = ck('ckReqBtn'), req = CHECKOUT.requestOnly.includes(current);
   btn.disabled = true; btn.textContent = 'Sending…'; ckMsg('');
   try {
+    const ref = await ckNewRef(req ? 'request' : 'booking');
     await ckSendDetails(ref, (req ? 'Music Production request ' : 'Booking request ') + ref + ' — ' + ck('h-title').value.trim());
     ckDone(req ? 'request' : 'booking-request', ref);
   } catch(e){
@@ -1733,7 +1745,8 @@ function ckRenderButtons(){
     onClick(){ if (!ckReady()){ ckGate(); ckMsg('Tick the box and complete the "I am human" check first.', 'bad'); } },
     async createOrder(){
       ckMsg('');
-      ckOrderRef = ckRef();
+      // one order number per checkout: trying again after a cancel keeps the same number
+      if (!ckOrderRef) ckOrderRef = await ckNewRef('booking');
       // details first, while the human check is still fresh; then the order with the server's price
       try {
         await ckSendDetails(ckOrderRef, 'New booking ' + ckOrderRef + ' — ' + SERVICES[current].name + ' — check PayPal for payment');
@@ -1746,6 +1759,7 @@ function ckRenderButtons(){
         service: current, options: ckChosen().map(c => c.label), ref: ckOrderRef,
         email: ck('h-email').value.trim(), trackTitle: ck('h-title').value.trim(), artist: ck('h-artist').value.trim(),
       });
+      if (o.ref) ckOrderRef = o.ref;
       return o.id;
     },
     async onApprove(data, actions){
@@ -1755,6 +1769,7 @@ function ckRenderButtons(){
         if (c.status === 'DECLINED') return actions.restart();
         if (c.status !== 'COMPLETED') throw new Error('not completed');
         ckDone('paid', c.ref || ckOrderRef, c.amount);
+        ckOrderRef = '';
       } catch(e){
         ckMsg('We could not confirm the payment. Nothing was charged if PayPal shows no payment. Email evoxelsounds@gmail.com with reference ' + ckOrderRef + ' and we will sort it out.', 'bad');
       }

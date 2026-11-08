@@ -2,18 +2,38 @@
    EVOXEL SOUNDS — checkout server (Cloudflare Worker)
 
    What it does
+   - POST /ref                    → gives out the next order number
+                                    (EVX-1001, EVX-1002, … or REQ-1001
+                                    for Music Production requests) and
+                                    records the order
    - POST /orders                 → works out the price from the
                                     price list below and creates a
                                     PayPal order
    - POST /orders/{id}/capture    → takes the payment and checks it
 
-   The browser never decides the price, so it can't be tampered with.
+   The browser never decides the price or the order number, so
+   neither can be tampered with.
 
-   Settings (Cloudflare dashboard → this Worker → Settings →
-   Variables and Secrets):
-     PAYPAL_CLIENT_ID   (text)    the app's Client ID
-     PAYPAL_SECRET      (secret)  the app's Secret — never put it in code
-     PAYPAL_ENV         (text)    sandbox  or  live
+   Order numbers
+   - Counted up by the server in a D1 database, one step per order,
+     so two orders can never get the same number.
+   - Every order is kept in the "orders" table with its status:
+       reserved  number given, customer is at the payment step
+       pending   PayPal order created, waiting for payment
+       paid      payment captured
+       received  Music Production request (no payment)
+   - Numbers of checkouts that were never paid stay "reserved" or
+     "pending" and are not reused.
+   - The tables are created automatically on first use.
+
+   Settings (Cloudflare dashboard → this Worker → Settings):
+     Variables and Secrets
+       PAYPAL_CLIENT_ID   (text)    the app's Client ID
+       PAYPAL_SECRET      (secret)  the app's Secret — never put it in code
+       PAYPAL_ENV         (text)    sandbox  or  live
+     Bindings
+       DB                 (D1 database)  where order numbers and orders
+                                         are kept
    ============================================================ */
 
 /* PRICE LIST — must match the SERVICES list on the website.
@@ -71,6 +91,7 @@ export default {
 
     const url = new URL(request.url);
     try {
+      if (url.pathname === '/ref') return json(await newRef(await request.json(), env));
       if (url.pathname === '/orders') return json(await createOrder(await request.json(), env));
       const m = url.pathname.match(/^\/orders\/([A-Z0-9]+)\/capture$/);
       if (m) return json(await captureOrder(m[1], env));
@@ -102,6 +123,72 @@ async function accessToken(env) {
 function httpError(status, message) { const e = new Error(message); e.status = status; return e; }
 const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
 const usd = n => n.toFixed(2);
+const now = () => new Date().toISOString();
+
+/* ---------- order numbers (D1) ---------- */
+const FIRST_NUMBER = 1001;
+const PREFIX = { booking: 'EVX', request: 'REQ' };
+let schemaReady = null;
+
+// the database, with its tables in place; null when no DB is bound
+async function database(env) {
+  if (!env.DB) return null;
+  if (!schemaReady) {
+    schemaReady = env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS counters (
+        name  TEXT PRIMARY KEY,
+        value INTEGER NOT NULL
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS orders (
+        ref             TEXT PRIMARY KEY,
+        kind            TEXT NOT NULL,
+        status          TEXT NOT NULL,
+        service         TEXT,
+        options         TEXT,
+        email           TEXT,
+        artist          TEXT,
+        track           TEXT,
+        total           REAL,
+        paypal_order_id TEXT,
+        capture_id      TEXT,
+        amount_paid     REAL,
+        payer_email     TEXT,
+        created_at      TEXT NOT NULL,
+        updated_at      TEXT NOT NULL,
+        paid_at         TEXT
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS orders_paypal ON orders (paypal_order_id)`),
+    ]).catch(err => { schemaReady = null; throw err; });
+  }
+  await schemaReady;
+  return env.DB;
+}
+
+// takes the next number and records the order in one transaction
+async function reserveRef(DB, kind, info) {
+  const prefix = PREFIX[kind];
+  const t = now();
+  const [, inserted] = await DB.batch([
+    DB.prepare(`INSERT INTO counters (name, value) VALUES (?1, ?2)
+                ON CONFLICT (name) DO UPDATE SET value = value + 1`).bind(prefix, FIRST_NUMBER),
+    DB.prepare(`INSERT INTO orders (ref, kind, status, service, email, artist, track, created_at, updated_at)
+                SELECT ?1 || '-' || value, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8 FROM counters WHERE name = ?1
+                RETURNING ref`)
+      .bind(prefix, kind, kind === 'request' ? 'received' : 'reserved',
+            clip(info.service, 40), clip(info.email, 127), clip(info.artist, 50), clip(info.trackTitle, 60), t),
+  ]);
+  return inserted.results[0].ref;
+}
+
+async function newRef(body, env) {
+  const kind = body.kind === 'request' ? 'request' : 'booking';
+  const DB = await database(env);
+  if (!DB) throw httpError(503, 'Order numbers are not set up');
+  return { ref: await reserveRef(DB, kind, body) };
+}
+
+// a fallback that is still very unlikely to repeat, used only if the database is down
+const fallbackRef = () => 'EVX-' + crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
 
 /* ---------- create ---------- */
 async function createOrder(body, env) {
@@ -126,13 +213,27 @@ async function createOrder(body, env) {
     }
   }
 
-  const ref = clip(body.ref, 40) || 'EVX-' + crypto.randomUUID().slice(0, 6).toUpperCase();
+  // the order number must be one this server gave out and not yet paid;
+  // anything else gets a fresh number
+  let ref = clip(body.ref, 40), DB = null;
+  try {
+    DB = await database(env);
+    if (DB) {
+      const row = ref ? await DB.prepare(`SELECT status FROM orders WHERE ref = ?1 AND kind = 'booking'`).bind(ref).first() : null;
+      if (!row || row.status === 'paid') ref = await reserveRef(DB, 'booking', body);
+    }
+  } catch (err) {
+    console.error('order number lookup failed', err);
+    DB = null;
+  }
+  if (!ref) ref = fallbackRef();
   const track = clip(body.trackTitle, 60), artist = clip(body.artist, 50);
 
   const token = await accessToken(env);
   const r = await fetch(apiBase(env) + '/v2/checkout/orders', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'PayPal-Request-Id': ref },
+    // a new request id each time, so a retry with other options gets a new PayPal order at the right price
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'PayPal-Request-Id': crypto.randomUUID() },
     body: JSON.stringify({
       intent: 'CAPTURE',
       purchase_units: [{
@@ -148,6 +249,14 @@ async function createOrder(body, env) {
   });
   const data = await r.json();
   if (!r.ok) throw httpError(502, (data.details && data.details[0] && data.details[0].description) || 'PayPal could not create the order');
+
+  if (DB) {
+    try {
+      await DB.prepare(`UPDATE orders SET status = 'pending', service = ?2, options = ?3, email = ?4, artist = ?5, track = ?6,
+                          total = ?7, paypal_order_id = ?8, updated_at = ?9 WHERE ref = ?1`)
+        .bind(ref, svc.name, picked.join(' | '), clip(body.email, 127), artist, track, total, data.id, now()).run();
+    } catch (err) { console.error('could not record order', ref, err); }
+  }
   return { id: data.id, ref, total };
 }
 
@@ -167,6 +276,21 @@ async function captureOrder(orderId, env) {
 
   const unit = data.purchase_units && data.purchase_units[0];
   const cap = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];
+
+  // the payment is already taken here, so a database problem must not turn it into an error
+  if (data.status === 'COMPLETED') {
+    try {
+      const DB = await database(env);
+      if (DB) {
+        const t = now();
+        await DB.prepare(`UPDATE orders SET status = 'paid', capture_id = ?2, amount_paid = ?3, payer_email = ?4,
+                            paid_at = ?5, updated_at = ?5 WHERE paypal_order_id = ?1`)
+          .bind(orderId, (cap && cap.id) || null, cap && cap.amount ? Number(cap.amount.value) : null,
+                (data.payer && data.payer.email_address) || null, t).run();
+      }
+    } catch (err) { console.error('could not mark order paid', orderId, err); }
+  }
+
   return {
     status: data.status,                       // COMPLETED when paid
     captureId: cap && cap.id,
