@@ -729,6 +729,11 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .ck-req[disabled]{cursor:not-allowed}
 .ck-msg{margin-top:14px;padding:12px 14px;border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-size:.92rem;max-width:60ch}
 .ck-msg.bad{border-color:#ff6b5a;color:#ffc3b9}
+.ck-msg.busy{display:flex;gap:12px;align-items:flex-start;border-color:#e6a23c;background:rgba(230,162,60,.08)}
+.ck-msg.busy::before{content:"";flex:none;width:16px;height:16px;margin-top:2px;border:2px solid rgba(230,162,60,.35);border-top-color:#e6a23c;border-radius:50%;animation:ckSpin .8s linear infinite}
+.ck-msg.busy b{color:#f3c87a;font-weight:600}
+@keyframes ckSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.ck-msg.busy::before{animation-duration:2.4s}}
 .ck-done{border:1px solid #7fd29a;border-radius:18px;background:var(--surface);padding:32px 24px;text-align:center;outline:none}
 .ck-ic{width:56px;height:56px;border-radius:50%;background:rgba(127,210,154,.12);color:#7fd29a;display:grid;place-items:center;margin:0 auto 14px;font-size:1.6rem}
 .ck-done h3{font-family:var(--display);text-transform:uppercase;font-size:1.6rem;margin:0}
@@ -1666,6 +1671,19 @@ function ckMsg(text, kind){
   const m = ck('ckMsg'); m.hidden = !text; m.textContent = text || ''; m.className = 'ck-msg' + (kind ? ' ' + kind : '');
 }
 
+// while a payment is in progress: a "don't close this page" notice, and the browser asks before leaving
+const ckKeepOpen = e => { e.preventDefault(); e.returnValue = ''; };
+function ckBusy(text){
+  if (text){
+    ckMsg('', '');
+    const m = ck('ckMsg'); m.hidden = false; m.className = 'ck-msg busy';
+    m.innerHTML = '<span>' + escH(text) + ' <b>Please don\'t close or refresh this page</b> until you see your confirmation.</span>';
+    window.addEventListener('beforeunload', ckKeepOpen);
+  } else {
+    window.removeEventListener('beforeunload', ckKeepOpen);
+  }
+}
+
 /* ---------- email the details (Web3Forms) ---------- */
 async function ckSendDetails(ref, subject){
   const s = SERVICES[current], v = id => ck(id).value.trim();
@@ -1744,13 +1762,14 @@ function ckRenderButtons(){
     onInit(data, actions){ ppActions = actions; ckGate(); },
     onClick(){ if (!ckReady()){ ckGate(); ckMsg('Tick the box and complete the "I am human" check first.', 'bad'); } },
     async createOrder(){
-      ckMsg('');
+      ckBusy('Your payment is in progress.');
       // one order number per checkout: trying again after a cancel keeps the same number
       if (!ckOrderRef) ckOrderRef = await ckNewRef('booking');
       // details first, while the human check is still fresh; then the order with the server's price
       try {
         await ckSendDetails(ckOrderRef, 'New booking ' + ckOrderRef + ' — ' + SERVICES[current].name + ' — check PayPal for payment');
       } catch(e){
+        ckBusy(false);
         ckMsg('Please complete the "I am human" check again, then press the PayPal button.', 'bad');
         ckResetCaptcha();
         throw e;
@@ -1763,19 +1782,21 @@ function ckRenderButtons(){
       return o.id;
     },
     async onApprove(data, actions){
-      ckMsg('Confirming your payment…');
+      ckBusy('Confirming your payment…');
       try {
         const c = await ckApi('/orders/' + data.orderID + '/capture');
         if (c.status === 'DECLINED') return actions.restart();
         if (c.status !== 'COMPLETED') throw new Error('not completed');
+        ckBusy(false);
         ckDone('paid', c.ref || ckOrderRef, c.amount);
         ckOrderRef = '';
       } catch(e){
+        ckBusy(false);
         ckMsg('We could not confirm the payment. Nothing was charged if PayPal shows no payment. Email evoxelsounds@gmail.com with reference ' + ckOrderRef + ' and we will sort it out.', 'bad');
       }
     },
-    onCancel(){ ckMsg('Payment cancelled. Nothing was charged.'); ckResetCaptcha(); },
-    onError(){ ckMsg('Something went wrong with PayPal. Nothing was charged. Please try again, or email evoxelsounds@gmail.com.', 'bad'); ckResetCaptcha(); },
+    onCancel(){ ckBusy(false); ckMsg('Payment cancelled. Nothing was charged.'); ckResetCaptcha(); },
+    onError(){ ckBusy(false); ckMsg('Something went wrong with PayPal. Nothing was charged. Please try again, or email evoxelsounds@gmail.com.', 'bad'); ckResetCaptcha(); },
   }).render('#ppButtons');
 }
 
