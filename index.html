@@ -1584,7 +1584,7 @@ select = function(slug){ _select(slug); ckSyncPath(); ckTrackView(); };
    cookie consent (evxTrack checks that). */
 const ckFired = new Set();
 function ckPixel(name){
-  if (!window.evxTrack) return;
+  if (!window.evxPixelOn || !evxPixelOn()) return;   // no consent (yet): not sent, and not marked as sent
   const key = name + ':' + current;
   if (ckFired.has(key)) return;
   ckFired.add(key);
@@ -1598,6 +1598,26 @@ function ckTrackView(){
   const v = document.getElementById('view-hire');
   if (v && !v.hidden && ckStep === 1) ckPixel('ViewContent');
 }
+// the Pixel starts a moment after the page (consent check), so a visitor who lands straight on the booking page gets ViewContent then
+document.addEventListener('evx:pixel-on', ckTrackView);
+
+/* ---------- Meta Pixel: interest signals inside the booking form ----------
+   Our own events (not Meta's standard ones), once per service per visit:
+   SelectAddon    ticked a paid extra (more multitracks, rush, analog, stems)
+   FormStart      started typing their details in step 2
+   PaymentCancel  opened PayPal and closed it without paying */
+function ckSignal(name, extra){
+  if (!window.evxSignal) return;
+  evxSignal(name, Object.assign({ content_name: SERVICES[current].name, content_ids: [current] },
+    CHECKOUT.requestOnly.includes(current) ? {} : { value: ckTotal(), currency: 'USD' }, extra || {}), current);
+}
+confPanel.addEventListener('change', e => {
+  const i = e.target;
+  if (i.matches('input') && i.checked && +i.dataset.price > 0) ckSignal('SelectAddon', { addon: i.dataset.label });
+});
+document.getElementById('hireForm').addEventListener('input', e => {
+  if (ckStep === 2 && e.target.matches('#ck2 input, #ck2 textarea, #ck2 select')) ckSignal('FormStart');
+});
 
 /* ---------- link: Dropbox or SoundCloud only ---------- */
 function ckLinkHost(v){
@@ -1805,6 +1825,7 @@ function ckRenderButtons(){
       const o = await ckApi('/orders', {
         service: current, options: ckChosen().map(c => c.label), ref: ckOrderRef,
         email: ck('h-email').value.trim(), trackTitle: ck('h-title').value.trim(), artist: ck('h-artist').value.trim(),
+        meta: window.evxMetaInfo ? window.evxMetaInfo() : null,   // null without cookie consent: then the server reports nothing to Meta
       });
       if (o.ref) ckOrderRef = o.ref;
       return o.id;
@@ -1823,7 +1844,7 @@ function ckRenderButtons(){
         ckMsg('We could not confirm the payment. Nothing was charged if PayPal shows no payment. Email evoxelsounds@gmail.com with reference ' + ckOrderRef + ' and we will sort it out.', 'bad');
       }
     },
-    onCancel(){ ckBusy(false); ckMsg('Payment cancelled. Nothing was charged.'); ckResetCaptcha(); },
+    onCancel(){ ckBusy(false); ckMsg('Payment cancelled. Nothing was charged.'); ckResetCaptcha(); ckSignal('PaymentCancel'); },
     onError(){ ckBusy(false); ckMsg('Something went wrong with PayPal. Nothing was charged. Please try again, or email evoxelsounds@gmail.com.', 'bad'); ckResetCaptcha(); },
   }).render('#ppButtons');
 }
@@ -1832,7 +1853,8 @@ function ckRenderButtons(){
 function ckDone(kind, ref, amount){
   if (window.evxTrack){
     const base = { content_name: SERVICES[current].name, content_ids: [current], content_type: 'product' };
-    if (kind === 'paid') evxTrack('Purchase', Object.assign(base, { value: +amount || ckTotal(), currency: 'USD' }));
+    // eventID = order number, the same ID the checkout server uses when it reports this sale, so Meta counts it once
+    if (kind === 'paid') evxTrack('Purchase', Object.assign(base, { value: +amount || ckTotal(), currency: 'USD' }), { eventID: ref });
     else evxTrack('Lead', base);
   }
   const first = escH(ck('h-name').value.trim().split(' ')[0]), email = escH(ck('h-email').value.trim()), title = escH(ck('h-title').value.trim());
@@ -1897,6 +1919,26 @@ fqs.forEach(f => f.querySelector('.fq-head').addEventListener('click', () => {
   fqs.forEach(o => o.classList.remove('open'));
   if (opening) f.classList.add('open');
 }));
+
+/* ===== Meta Pixel: interest signals on the home page =====
+   Our own events, once per visit:
+   ViewPricing  the Services section (prices) was on screen
+   Engaged60s   60 seconds with the page in front of them, and scrolled at least half of it */
+(function(){
+  const sig = (n, p) => window.evxSignal && evxSignal(n, p || {});
+  const svc = document.getElementById('services');
+  if (svc && 'IntersectionObserver' in window){
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)){ io.disconnect(); sig('ViewPricing'); } }, { rootMargin: '0px 0px -40% 0px' });   // section reached the upper 60% of the screen (it is taller than a phone screen)
+    io.observe(svc);
+  }
+  let secs = 0, deep = 0;
+  setInterval(() => {   // keeps checking, so it still counts if cookies are accepted later; evxSignal sends it only once
+    const max = document.documentElement.scrollHeight - innerHeight;
+    if (max > 0) deep = Math.max(deep, scrollY / max);
+    if (!document.hidden) secs++;
+    if (secs >= 60 && deep >= 0.5) sig('Engaged60s');
+  }, 1000);
+})();
 
 /* ===== hero background video =====
    The photo shows first. The video loads only after the page has finished
@@ -2221,6 +2263,7 @@ function start(offset){
   const when = ctx.currentTime + 0.02;          // both start on the exact same sample
   srcB.start(when, offset); srcA.start(when, offset);
   startCtx = when; startOff = offset; playing = true;
+  abpPlayed();
   srcA.onended = () => { if (playing && position() >= duration - 0.05){ stop(); startOff = 0; draw(0); } };
   setIcon(); loop();
 }
@@ -2250,6 +2293,7 @@ function seek(t){
 }
 
 function setSide(s){
+  if (s !== side && playing) abpSignal('CompareAB');
   side = s;
   btnB.setAttribute('aria-pressed', s === 'before');
   btnA.setAttribute('aria-pressed', s === 'after');
@@ -2295,6 +2339,25 @@ wave.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight'){ seek(position() + 2); e.preventDefault(); }
   if (e.key === 'ArrowLeft'){ seek(position() - 2); e.preventDefault(); }
 });
+
+/* ---------- Meta Pixel: interest signals from the player ----------
+   Our own events, once per visit:
+   PlayBeforeAfter  pressed play on a before/after track
+   CompareAB        switched between Before and After while it plays
+   DeepListen       30 seconds of listening in total, or a 3rd track played */
+const abpTrack = () => { const t = TRACKS[loadedIdx] || {}; return { content_name: (t.artist ? t.artist + ' – ' : '') + (t.title || ''), genre: t.genre || '' }; };
+function abpSignal(name, extra){ if (window.evxSignal) evxSignal(name, Object.assign(abpTrack(), extra || {})); }
+const abpTracksPlayed = new Set();
+let abpListened = 0;
+function abpPlayed(){
+  abpSignal('PlayBeforeAfter');
+  abpTracksPlayed.add(loadedIdx);
+  if (abpTracksPlayed.size >= 3) abpSignal('DeepListen', { reason: '3 tracks' });
+}
+setInterval(() => {
+  if (!playing || document.hidden) return;
+  if (++abpListened === 30) abpSignal('DeepListen', { reason: '30 seconds' });
+}, 1000);
 
 /* controls */
 playBtn.addEventListener('click', toggle);

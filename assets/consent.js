@@ -11,9 +11,17 @@
 
    To switch the Pixel on: put the Pixel ID below.
    While it is empty, nothing is sent to Meta.
+
+   The Pixel only sends to Meta on the real site (LIVE_HOSTS).
+   On localhost, the pages.dev copy and preview links it runs in
+   test mode: every event is written to the browser console
+   ("[pixel] …") and nothing reaches Meta, so tests never count
+   as visitors or sales.
    ============================================================ */
 (function(){
   var PIXEL_ID = '1162658383094059';
+  var LIVE_HOSTS = ['evoxelmusic.com', 'www.evoxelmusic.com'];
+  var LIVE = LIVE_HOSTS.indexOf(location.hostname) !== -1;
   var KEY = 'evx-consent', MAX_AGE = 365 * 24 * 3600 * 1000;
   var CONSENT_REGIONS = ('AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE ' +
                          'IS LI NO GB CH').split(' ');
@@ -47,6 +55,12 @@
   function loadPixel(){
     if (pixelOn || !PIXEL_ID) return;
     pixelOn = true;
+    if (!LIVE){ console.info('[pixel] test mode on ' + location.hostname + ': events are logged here, nothing is sent to Meta'); console.info('[pixel] PageView'); }
+    else startFbq();
+    // the page may already be showing something worth an event (e.g. a visitor who landed on the booking page)
+    document.dispatchEvent(new Event('evx:pixel-on'));
+  }
+  function startFbq(){
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
     n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -55,8 +69,32 @@
     window.fbq('init', PIXEL_ID);
     window.fbq('track', 'PageView');
   }
-  // site code calls this for events (booking started, purchase, request). Does nothing without consent.
-  window.evxTrack = function(name, params){ if (pixelOn && window.fbq) window.fbq('track', name, params || {}); };
+  function send(kind, name, params, opts){
+    if (!pixelOn) return;
+    if (!LIVE){ console.info('[pixel] ' + name, params || {}, opts || ''); return; }
+    if (window.fbq) window.fbq(kind, name, params || {}, opts || {});
+  }
+  // site code calls these for events. They do nothing without consent.
+  //   evxTrack        Meta's standard events (ViewContent, Purchase, …); opts can carry { eventID }
+  //   evxTrackCustom  our own interest signals (PlayBeforeAfter, FormStart, …)
+  window.evxPixelOn = function(){ return pixelOn; };
+  window.evxTrack = function(name, params, opts){ send('track', name, params, opts); };
+  window.evxTrackCustom = function(name, params){ send('trackCustom', name, params); };
+  // an interest signal sent at most once per page visit (per name + key)
+  var sentOnce = {};
+  window.evxSignal = function(name, params, key){
+    var k = name + ':' + (key || '');
+    if (!pixelOn || sentOnce[k]) return;
+    sentOnce[k] = true;
+    send('trackCustom', name, params);
+  };
+  // what the checkout server needs to report the sale to Meta itself (Conversions API).
+  // null without consent or off the real site, and then the server sends nothing.
+  window.evxMetaInfo = function(){
+    if (!pixelOn || !LIVE) return null;
+    var c = function(n){ var m = document.cookie.match('(?:^|; )' + n + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; };
+    return { fbp: c('_fbp'), fbc: c('_fbc'), url: location.href };
+  };
 
   /* ---------- banner ---------- */
   var css = '' +

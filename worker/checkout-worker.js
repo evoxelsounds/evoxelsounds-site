@@ -32,11 +32,26 @@
      "pending" and are not reused.
    - The tables are created automatically on first use.
 
+   Sales reported to Meta (Conversions API)
+   - When an order becomes paid, the server tells Meta about the sale
+     itself, so it still counts if the buyer closed the page before the
+     site could. The site sends the same Purchase with the order number
+     as its ID, and Meta keeps only one of the two.
+   - Only for buyers who allowed the Meta Pixel: the site sends the
+     Meta cookies with the order only then. Without them nothing is sent.
+   - Each sale is sent once (capi_sent_at).
+
    Settings (Cloudflare dashboard → this Worker → Settings):
      Variables and Secrets
        PAYPAL_CLIENT_ID   (text)    the app's Client ID
        PAYPAL_SECRET      (secret)  the app's Secret — never put it in code
        PAYPAL_ENV         (text)    sandbox  or  live
+       META_CAPI_TOKEN    (secret)  Conversions API access token from Meta
+                                    Events Manager → the pixel → Settings.
+                                    Without it nothing is sent to Meta.
+       META_PIXEL_ID      (text)    optional; defaults to the site's pixel
+       META_TEST_EVENT_CODE (text)  optional; while set, sales show up only
+                                    under "Test events" in Events Manager
      Bindings
        DB                 (D1 database)  where order numbers and orders
                                          are kept
@@ -99,7 +114,7 @@ export default {
     try {
       if (url.pathname === '/webhook') return json(await handleWebhook(await request.json().catch(() => ({})), env));
       if (url.pathname === '/ref') return json(await newRef(await request.json(), env));
-      if (url.pathname === '/orders') return json(await createOrder(await request.json(), env));
+      if (url.pathname === '/orders') return json(await createOrder(await request.json(), env, request));
       const m = url.pathname.match(/^\/orders\/([A-Z0-9]+)\/capture$/);
       if (m) return json(await captureOrder(m[1], env));
       return json({ error: 'Not found' }, 404);
@@ -162,10 +177,17 @@ async function database(env) {
         payer_email     TEXT,
         created_at      TEXT NOT NULL,
         updated_at      TEXT NOT NULL,
-        paid_at         TEXT
+        paid_at         TEXT,
+        meta            TEXT,
+        capi_sent_at    TEXT
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS orders_paypal ON orders (paypal_order_id)`),
-    ]).catch(err => { schemaReady = null; throw err; });
+    ]).then(async () => {
+      // columns added later; a table made before them gets them here (an error means it already has them)
+      for (const col of ['meta TEXT', 'capi_sent_at TEXT']) {
+        await env.DB.prepare('ALTER TABLE orders ADD COLUMN ' + col).run().catch(() => {});
+      }
+    }).catch(err => { schemaReady = null; throw err; });
   }
   await schemaReady;
   return env.DB;
@@ -198,7 +220,7 @@ async function newRef(body, env) {
 const fallbackRef = () => 'EVX-' + crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
 
 /* ---------- create ---------- */
-async function createOrder(body, env) {
+async function createOrder(body, env, request) {
   const svc = PRICES[body.service];
   if (!svc) throw httpError(400, 'Unknown service');
 
@@ -260,8 +282,9 @@ async function createOrder(body, env) {
   if (DB) {
     try {
       await DB.prepare(`UPDATE orders SET status = 'pending', service = ?2, options = ?3, email = ?4, artist = ?5, track = ?6,
-                          total = ?7, paypal_order_id = ?8, updated_at = ?9 WHERE ref = ?1`)
-        .bind(ref, svc.name, picked.join(' | '), clip(body.email, 127), artist, track, total, data.id, now()).run();
+                          total = ?7, paypal_order_id = ?8, updated_at = ?9, meta = ?10 WHERE ref = ?1`)
+        .bind(ref, svc.name, picked.join(' | '), clip(body.email, 127), artist, track, total, data.id, now(),
+              metaInfo(body, request)).run();
     } catch (err) { console.error('could not record order', ref, err); }
   }
   return { id: data.id, ref, total };
@@ -342,10 +365,13 @@ async function syncOrder(order, env) {
     const row = await DB.prepare(`SELECT status FROM orders WHERE paypal_order_id = ?1`).bind(order.id).first();
 
     if (row) {
+      // already paid: a repeat notification only retries a sale Meta has not received yet
+      if (status === 'paid' && row.status === 'paid') return reportPurchase(DB, order.id, env);
       if ((STATUS_RANK[status] || 0) <= (STATUS_RANK[row.status] || 0)) return;
       await DB.prepare(`UPDATE orders SET status = ?2, capture_id = ?3, amount_paid = ?4, payer_email = COALESCE(?5, payer_email),
                           paid_at = COALESCE(paid_at, ?6), updated_at = ?7 WHERE paypal_order_id = ?1`)
         .bind(order.id, status, cap.id || null, amount, payer, paidAt, t).run();
+      if (status === 'paid') await reportPurchase(DB, order.id, env);
     } else {
       // an order this database never saw (its number came from the fallback): keep it anyway
       await DB.prepare(`INSERT OR IGNORE INTO orders (ref, kind, status, service, email, total, paypal_order_id, capture_id,
@@ -356,6 +382,69 @@ async function syncOrder(order, env) {
     }
   } catch (err) {
     console.error('could not record payment for PayPal order', order && order.id, err);
+  }
+}
+
+/* ---------- sales reported to Meta (Conversions API) ---------- */
+const META_PIXEL_ID = '1162658383094059';
+const META_API = 'https://graph.facebook.com/v23.0';
+
+// what we keep for Meta with an order: only when the site sent its Meta info (the buyer allowed the Pixel)
+function metaInfo(body, request) {
+  const m = body && body.meta;
+  if (!m || typeof m !== 'object') return null;
+  return JSON.stringify({
+    fbp: clip(m.fbp, 200), fbc: clip(m.fbc, 300), url: clip(m.url, 500),
+    ip: (request && request.headers.get('CF-Connecting-IP')) || '',
+    ua: clip(request && request.headers.get('User-Agent'), 400),
+    service: clip(body.service, 40),
+  });
+}
+
+async function sha256(text) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// sends the sale to Meta once. Never throws: the payment is already taken when this runs.
+async function reportPurchase(DB, paypalOrderId, env) {
+  if (!env.META_CAPI_TOKEN) return;
+  let row = null;
+  try {
+    // claim the order first, so the site's capture and PayPal's notification can't both send it
+    row = await DB.prepare(`UPDATE orders SET capi_sent_at = ?2 WHERE paypal_order_id = ?1 AND capi_sent_at IS NULL AND meta IS NOT NULL
+                            RETURNING ref, email, payer_email, amount_paid, total, service, meta, paid_at`)
+      .bind(paypalOrderId, now()).first();
+    if (!row) return;
+    const m = JSON.parse(row.meta);
+    const emails = [...new Set([row.email, row.payer_email].filter(Boolean).map(e => e.trim().toLowerCase()))];
+    const user = { em: await Promise.all(emails.map(sha256)) };
+    if (m.ip) user.client_ip_address = m.ip;
+    if (m.ua) user.client_user_agent = m.ua;
+    if (m.fbp) user.fbp = m.fbp;
+    if (m.fbc) user.fbc = m.fbc;
+    const event = {
+      event_name: 'Purchase',
+      event_time: Math.floor(Date.parse(row.paid_at || now()) / 1000),
+      event_id: row.ref,                                   // same ID as the site's Purchase, so Meta counts it once
+      action_source: 'website',
+      event_source_url: m.url || undefined,
+      user_data: user,
+      custom_data: {
+        value: Number(row.amount_paid || row.total || 0), currency: 'USD',
+        content_name: row.service, content_ids: m.service ? [m.service] : undefined, content_type: 'product',
+      },
+    };
+    const body = { data: [event] };
+    if (env.META_TEST_EVENT_CODE) body.test_event_code = env.META_TEST_EVENT_CODE;
+    const r = await fetch(META_API + '/' + (env.META_PIXEL_ID || META_PIXEL_ID) + '/events?access_token=' + encodeURIComponent(env.META_CAPI_TOKEN), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('Meta answered ' + r.status + ': ' + (await r.text()).slice(0, 300));
+  } catch (err) {
+    console.error('could not report sale to Meta', paypalOrderId, err);
+    // let a later PayPal notification try again
+    if (row) await DB.prepare(`UPDATE orders SET capi_sent_at = NULL WHERE paypal_order_id = ?1`).bind(paypalOrderId).run().catch(() => {});
   }
 }
 
