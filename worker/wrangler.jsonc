@@ -1,0 +1,15 @@
+// Deploy settings for the checkout server. From this folder: npx wrangler deploy
+// Secrets (PAYPAL_SECRET, META_CAPI_TOKEN) live only in Cloudflare and are kept on every deploy.
+{
+  "name": "evoxel-checkout",
+  "main": "checkout-worker.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "vars": {
+    "PAYPAL_CLIENT_ID": "BAAIw5gpDS4vKG0Ns3Pa9QSJ5wPpQojafa9lzWxsrPu6Vy-6axPTRopT5GB6KvSERQ2wLPRF8NazlzEKP4",
+    "PAYPAL_ENV": "live"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "evoxel-orders", "database_id": "533489a4-b3b5-46f9-8334-0ced4d1d2d38" }
+  ]
+}
