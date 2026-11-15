@@ -30,11 +30,13 @@
    Data
    - Orders, revenue and PayPal fees: the "orders" table the checkout
      Worker writes (paypal_fee / paypal_net come from each capture).
-   - Ad spend and visits: the tables ad_spend_daily and visits_daily,
-     filled from Meta's Graph API every 3 hours (cron) with the
-     META_TOKEN secret. The first run reaches back 90 days for spend
-     and 27 days for visits (all Meta keeps); later runs redo the last
-     few days, since Meta still corrects recent numbers.
+   - Ad spend: ad_spend_daily, filled from Meta's Graph API every 3
+     hours (cron) with the META_TOKEN secret (ads_read). The first run
+     reaches back 90 days; later runs redo the last week, since Meta
+     still corrects recent numbers.
+   - Visits: site_visits_daily, counted by the site itself (assets/live.js
+     → checkout Worker), one per visit, by Israel date, source and device.
+     It counts everyone, cookies or not, unlike the Pixel.
    - admin_sync remembers each source's last run and error, so the page
      can say when Meta stopped answering (an expired token, say).
    ============================================================ */
@@ -150,37 +152,6 @@ async function syncMeta(env) {
     result.adSpend = { ok: false, message: err.message };
   }
 
-  // visits: PageView events from the Pixel by device, added up per UTC day. Only whole days from
-  // the start of the window are written, so a partial first day never overwrites a full one.
-  try {
-    const has = await DB.prepare('SELECT COUNT(*) AS n FROM visits_daily').first();
-    const startDay = Math.floor(Date.now() / DAY_MS) * DAY_MS - (has.n ? 3 : 27) * DAY_MS;
-    const buckets = await graph(env, `${env.META_PIXEL_ID}/stats`, {
-      aggregation: 'device_type', event: 'PageView',
-      start_time: String(startDay / 1000), end_time: String(Math.floor(Date.now() / 1000)),
-    });
-    const days = new Map();
-    for (const b of buckets) {
-      const t = Date.parse(b.start_time || b.timestamp);
-      if (Number.isNaN(t) || t < startDay) continue;
-      const day = utcDay(t);
-      const d = days.get(day) || { desktop: 0, mobile: 0 };
-      for (const v of b.data || []) {
-        if (v.value === 'desktop') d.desktop += Number(v.count) || 0;
-        else d.mobile += Number(v.count) || 0;
-      }
-      days.set(day, d);
-    }
-    const stmts = [...days].map(([day, d]) => DB.prepare(`INSERT INTO visits_daily (date, desktop, mobile, total, updated_at)
-        VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT (date) DO UPDATE SET desktop = ?2, mobile = ?3, total = ?4, updated_at = ?5`)
-      .bind(day, d.desktop, d.mobile, d.desktop + d.mobile, now));
-    for (let i = 0; i < stmts.length; i += 50) await DB.batch(stmts.slice(i, i + 50));
-    await recordSync(DB, 'visits', true, `${days.size} days from ${utcDay(startDay)}`);
-    result.visits = { ok: true, days: days.size };
-  } catch (err) {
-    await recordSync(DB, 'visits', false, err.message);
-    result.visits = { ok: false, message: err.message };
-  }
   return result;
 }
 
@@ -305,13 +276,6 @@ async function database(env) {
         updated_at  TEXT NOT NULL,
         PRIMARY KEY (date, campaign_id)
       )`),
-      env.DB.prepare(`CREATE TABLE IF NOT EXISTS visits_daily (
-        date       TEXT PRIMARY KEY,
-        desktop    INTEGER NOT NULL DEFAULT 0,
-        mobile     INTEGER NOT NULL DEFAULT 0,
-        total      INTEGER NOT NULL DEFAULT 0,
-        updated_at TEXT NOT NULL
-      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_sync (
         source  TEXT PRIMARY KEY,
         ok      INTEGER NOT NULL,
@@ -359,8 +323,16 @@ async function summary(url, env) {
 
   const adSpend = (await DB.prepare(`SELECT date, campaign, spend, currency, impressions, clicks FROM ad_spend_daily
       WHERE date >= ? AND date <= ? ORDER BY date`).bind(from, to).all()).results;
-  const visits = (await DB.prepare(`SELECT date, desktop, mobile, total FROM visits_daily
-      WHERE date >= ? AND date <= ? ORDER BY date`).bind(from, to).all()).results;
+  // visits the site counted itself; until the checkout Worker has made the table there are none
+  const visits = await DB.prepare(`SELECT date,
+        SUM(CASE WHEN device = 'desktop' THEN visits ELSE 0 END) AS desktop,
+        SUM(CASE WHEN device = 'mobile' THEN visits ELSE 0 END) AS mobile,
+        SUM(visits) AS total
+      FROM site_visits_daily WHERE date >= ? AND date <= ? GROUP BY date ORDER BY date`)
+    .bind(from, to).all().then((r) => r.results).catch(() => []);
+  const visitSources = await DB.prepare(`SELECT source, SUM(visits) AS visits FROM site_visits_daily
+      WHERE date >= ? AND date <= ? GROUP BY source ORDER BY visits DESC`)
+    .bind(from, to).all().then((r) => r.results).catch(() => []);
 
   const syncs = Object.fromEntries((await DB.prepare('SELECT source, ok, at, message FROM admin_sync').all()).results
     .map((s) => [s.source, s]));
@@ -380,10 +352,11 @@ async function summary(url, env) {
     funnel,
     adSpend,
     visits,
+    visitSources,
     sources: {
       orders: { connected: true },
       adSpend: metaSource('adSpend'),
-      visits: metaSource('visits'),
+      visits: { connected: true, state: 'ok', own: true },
     },
   };
 }

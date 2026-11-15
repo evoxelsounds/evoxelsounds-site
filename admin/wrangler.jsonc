@@ -13,13 +13,12 @@
   "routes": [
     { "pattern": "hq.evoxelmusic.com", "custom_domain": true }
   ],
-  // pulls ad spend and visits from Meta every 3 hours
+  // pulls ad spend from Meta every 3 hours
   "triggers": { "crons": ["0 */3 * * *"] },
   "vars": {
     "USD_ILS": "3.7",
     "META_API_VERSION": "v23.0",
     "META_AD_ACCOUNT": "606837333350044",
-    "META_PIXEL_ID": "1162658383094059",
     "META_CAMPAIGN_FILTER": "Site"
   },
   "d1_databases": [

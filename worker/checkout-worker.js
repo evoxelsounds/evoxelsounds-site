@@ -50,6 +50,10 @@
      no personal data are kept; the country is Cloudflare's 2 letters.
    - One row per visit in live_sessions, updated in place; rows older
      than an hour are deleted, so the table stays tiny.
+   - Each new visit also adds one to site_visits_daily (Israel date ×
+     source × device), the dashboard's visitor history. A tab that comes
+     back within the hour is the same visit, so "left" only moves the row
+     out of the live window instead of deleting it.
 
    Settings (Cloudflare dashboard → this Worker → Settings):
      Variables and Secrets
@@ -151,7 +155,8 @@ async function recordLive(text, request, env) {
   const DB = await database(env);
   if (!DB) return;
   if (m.t === 'leave') {
-    await DB.prepare('DELETE FROM live_sessions WHERE id = ?1').bind(m.id).run();
+    // out of the live count at once, but kept for an hour so a returning tab is the same visit
+    await DB.prepare('UPDATE live_sessions SET last_seen = last_seen - 120000 WHERE id = ?1').bind(m.id).run();
     return;
   }
   const t = Date.now();
@@ -159,10 +164,17 @@ async function recordLive(text, request, env) {
   const source = LIVE_SOURCES.includes(m.s) ? m.s : 'other';
   const device = LIVE_DEVICES.includes(m.d) ? m.d : null;
   const country = /^[A-Z]{2}$/.test(request.headers.get('CF-IPCountry') || '') ? request.headers.get('CF-IPCountry') : null;
-  await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country)
-      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6)
-      ON CONFLICT (id) DO UPDATE SET last_seen = ?2, place = ?3`)
+  const created = await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country)
+      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (id) DO NOTHING`)
     .bind(m.id, t, place, source, device, country).run();
+  if (created.meta && created.meta.changes) {
+    // a new visit: count it for today (Israel date)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(t));
+    await DB.prepare(`INSERT INTO site_visits_daily (date, source, device, visits) VALUES (?1, ?2, ?3, 1)
+        ON CONFLICT (date, source, device) DO UPDATE SET visits = visits + 1`).bind(day, source, device || 'desktop').run();
+  } else {
+    await DB.prepare('UPDATE live_sessions SET last_seen = ?2, place = ?3 WHERE id = ?1').bind(m.id, t, place).run();
+  }
   if (Math.random() < 0.02) await DB.prepare('DELETE FROM live_sessions WHERE last_seen < ?1').bind(t - 3600000).run();
 }
 
@@ -234,6 +246,13 @@ async function database(env) {
         country    TEXT
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS live_sessions_seen ON live_sessions (last_seen)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_visits_daily (
+        date   TEXT NOT NULL,
+        source TEXT NOT NULL,
+        device TEXT NOT NULL,
+        visits INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (date, source, device)
+      )`),
     ]).then(async () => {
       // columns added later; a table made before them gets them here (an error means it already has them)
       for (const col of ['meta TEXT', 'capi_sent_at TEXT', 'paypal_fee REAL', 'paypal_net REAL']) {

@@ -310,12 +310,13 @@ body.loading [data-k]{opacity:.45}
       <article class="card glass span4" id="funnel">
         <div class="label">${icon('funnel')}מהצפייה לתשלום<span class="end">ROAS <b class="num" data-k="roas">—</b></span></div>
         <div class="steps">
-          <div class="step"><span class="k">צפיות בעמודים</span><span class="n num" data-k="visits">—</span><span class="bar2"><i data-w="visits"></i></span></div>
+          <div class="step"><span class="k">ביקורים באתר</span><span class="n num" data-k="visits">—</span><span class="bar2"><i data-w="visits"></i></span></div>
           <div class="step"><span class="k">התחילו הזמנה</span><span class="n num" data-k="started">—</span><span class="bar2"><i data-w="started"></i></span><span class="rate" id="rate-started"></span></div>
           <div class="step"><span class="k">שילמו</span><span class="n num" data-k="orders">—</span><span class="bar2"><i data-w="orders"></i></span><span class="rate" id="rate-paid"></span></div>
         </div>
         <div class="split" id="split"></div>
         <div class="splitlg"><span><i class="dot" data-c="0"></i>דסקטופ <b class="num" data-k="desktop">—</b></span><span><i class="dot" data-c="1"></i>מובייל <b class="num" data-k="mobile">—</b></span></div>
+        <div class="chips" id="src-chips" aria-label="מאיפה הגיעו"></div>
       </article>
 
       <article class="card glass span3" id="attention">
@@ -353,7 +354,7 @@ body.loading [data-k]{opacity:.45}
           <li>עמלות PayPal: מה ש־PayPal גבתה בכל תשלום, כמו שהיא מדווחת. נשמרות מהתשלומים מכאן והלאה.</li>
           <li>מודעות: חשבון Evoxel Music במטא, רק קמפיינים שבשם שלהם מופיע "Site". מתעדכן כל 3 שעות, או מיד בכפתור הרענון.</li>
           <li>רווח נקי: הכנסות פחות עמלות PayPal פחות מודעות. ROAS: הכנסות חלקי מודעות.</li>
-          <li>צפיות בעמודים: אירועי PageView מה־Pixel לפי יום (UTC). אלה צפיות ולא מבקרים ייחודיים, והן נספרות רק אצל מי שאישר עוגיות.</li>
+          <li>ביקורים: האתר סופר אותם בעצמו, ביקור אחד לכל לשונית פתוחה (חזרה תוך שעה היא אותו ביקור), לפי תאריך בישראל. בלי עוגיות ובלי מידע אישי, אז נספרים גם מי שלא אישרו עוגיות. הספירה התחילה ב־16.11.26.</li>
           <li>התחילו הזמנה: הזמנות שנפתחו באתר בתקופה, ששולמו או לא. השוואה: מול תקופה באותו אורך שקדמה לה.</li>
         </ul></div>
       </details>
@@ -460,21 +461,24 @@ body.loading [data-k]{opacity:.45}
     const lede = $('#lede'); lede.replaceChildren();
     const say = (...parts) => parts.forEach((p, i) => { const n = i % 2 ? document.createElement('b') : document.createTextNode(''); n.textContent = p; lede.appendChild(n); });
     if (t.orders > 0) say('נכנסו ', fmt.ils(t.revenue_ils), ' מ־', fmt.int(t.orders) + (t.orders === 1 ? ' הזמנה' : ' הזמנות'), '. אחרי עמלות ומודעות נשארו ', fmt.ils(t.profit_ils), '.');
-    else if (adsOn && t.spend_ils > 0) say('עדיין אין מכירות בתקופה הזו. הוצאת ', fmt.ils(t.spend_ils), ' על מודעות, והאתר קיבל ', fmt.int(t.visits), ' צפיות.');
-    else say('עדיין אין מכירות בתקופה הזו', '', visitsOn ? '. האתר קיבל ' : '.', visitsOn ? fmt.int(t.visits) + ' צפיות' : '', visitsOn ? '.' : '');
+    else if (adsOn && t.spend_ils > 0) say('עדיין אין מכירות בתקופה הזו. הוצאת ', fmt.ils(t.spend_ils), ' על מודעות, והאתר קיבל ', fmt.int(t.visits) + ' ביקורים', '.');
+    else say('עדיין אין מכירות בתקופה הזו. האתר קיבל ', fmt.int(t.visits) + ' ביקורים', '.');
 
     // funnel bars, each step as a share of the one before
     const top = Math.max(t.visits, t.started, t.orders, 1);
     $$('[data-w]').forEach((i) => { i.style.width = (t[i.dataset.w] / top * 100) + '%'; });
-    $('#rate-started').textContent = visitsOn && t.visits ? fmt.pct(t.started / t.visits) + ' מהצפיות' : '';
+    $('#rate-started').textContent = visitsOn && t.visits ? fmt.pct(t.started / t.visits) + ' מהביקורים' : '';
     $('#rate-paid').textContent = t.started ? fmt.pct(t.orders / t.started) + ' מאלה שהתחילו' : '';
+    const srcBox = $('#src-chips'); srcBox.replaceChildren();
+    const SRC = { ad: 'ממודעה', instagram: 'אינסטגרם', facebook: 'פייסבוק', google: 'גוגל', other: 'אתר אחר', direct: 'ישיר' };
+    for (const r of (D.visitSources || [])) { const c = document.createElement('span'); c.className = 'chip'; const b = document.createElement('b'); b.textContent = fmt.int(r.visits); c.append(b, ' ' + (SRC[r.source] || r.source)); srcBox.appendChild(c); }
     const split = $('#split'); split.replaceChildren();
     if (visitsOn && t.visits) [['desktop', 0], ['mobile', 1]].forEach(([k, c]) => { const s = document.createElement('span'); s.style.width = t[k] / t.visits * 100 + '%'; s.style.background = color(c); split.appendChild(s); });
 
     // what needs attention, worst first
     const todo = [];
-    for (const [name, s] of [['מודעות', D.sources.adSpend], ['צפיות', D.sources.visits]]) if (s.state === 'error') todo.push(['bad', 'העדכון ממטא נכשל (' + name + '): ' + escH(s.message)]);
-    if (D.sources.adSpend.state === 'not_connected') todo.push(['warn', 'מטא עוד לא מחובר, אז מודעות וצפיות חסרות.']);
+    if (D.sources.adSpend.state === 'error') todo.push(['bad', 'העדכון ממטא נכשל: ' + escH(D.sources.adSpend.message)]);
+    if (D.sources.adSpend.state === 'not_connected') todo.push(['warn', 'מטא עוד לא מחובר, אז ההוצאה על מודעות חסרה.']);
     if (t.waiting) todo.push(['warn', '<b>' + t.waiting + '</b> תשלומים ממתינים לאישור של PayPal.']);
     if (t.abandoned) todo.push(['warn', '<b>' + t.abandoned + '</b> ' + (t.abandoned === 1 ? 'הזמנה נפתחה ולא שולמה' : 'הזמנות נפתחו ולא שולמו') + '.']);
     if (t.refunds) todo.push(['bad', '<b>' + t.refunds + '</b> החזרים או ביטולים בתקופה.']);
@@ -524,8 +528,7 @@ body.loading [data-k]{opacity:.45}
 
   function drawVisits(series, visitsOn, D) {
     chart($('#visitsChart'), series, {
-      label: 'צפיות בעמודים לפי תקופה, דסקטופ ומובייל', stack: [['desktop', 0], ['mobile', 1]],
-      empty: visitsOn ? null : (D.sources.visits.state === 'not_connected' ? 'מטא עוד לא מחובר' : 'ממתין לעדכון הראשון ממטא'),
+      label: 'ביקורים באתר לפי תקופה, דסקטופ ומובייל', stack: [['desktop', 0], ['mobile', 1]], empty: null,
       tip: (d) => [['דסקטופ', fmt.int(d.desktop)], ['מובייל', fmt.int(d.mobile)], ['סה״כ', fmt.int(d.visits)]],
     });
   }
@@ -582,7 +585,7 @@ body.loading [data-k]{opacity:.45}
     return m < 1 ? 'עכשיו' : m < 60 ? 'לפני ' + m + ' דק׳' : m < 1440 ? 'לפני ' + Math.round(m / 60) + ' שע׳' : 'לפני ' + Math.round(m / 1440) + ' ימים';
   }
   function showSync(sources) {
-    const el = $('#sync'), list = [sources.adSpend, sources.visits];
+    const el = $('#sync'), list = [sources.adSpend];
     $('#refresh').hidden = list.every((s) => s.state === 'not_connected');
     const failed = list.find((s) => s.state === 'error');
     el.classList.toggle('err', !!failed);
