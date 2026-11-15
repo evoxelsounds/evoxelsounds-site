@@ -41,6 +41,16 @@
      Meta cookies with the order only then. Without them nothing is sent.
    - Each sale is sent once (capi_sent_at).
 
+   Live visitors (POST /live, for the private dashboard)
+   - The site (assets/live.js) says "someone is here" about once a
+     minute while its tab is visible, and "left" when the tab closes.
+   - Anonymous: a random id that lives only in that browser tab, the
+     part of the site in view, where the visit came from (ad,
+     Instagram, Google…) and phone or desktop. No cookies, no IP and
+     no personal data are kept; the country is Cloudflare's 2 letters.
+   - One row per visit in live_sessions, updated in place; rows older
+     than an hour are deleted, so the table stays tiny.
+
    Settings (Cloudflare dashboard → this Worker → Settings):
      Variables and Secrets
        PAYPAL_CLIENT_ID   (text)    the app's Client ID
@@ -112,6 +122,11 @@ export default {
 
     const url = new URL(request.url);
     try {
+      if (url.pathname === '/live') {
+        if (!origin) return json({ error: 'Origin not allowed' }, 403);
+        await recordLive(await request.text(), request, env);
+        return new Response(null, { status: 204, headers: cors });
+      }
       if (url.pathname === '/webhook') return json(await handleWebhook(await request.json().catch(() => ({})), env));
       if (url.pathname === '/ref') return json(await newRef(await request.json(), env));
       if (url.pathname === '/orders') return json(await createOrder(await request.json(), env, request));
@@ -123,6 +138,33 @@ export default {
     }
   },
 };
+
+/* ---------- live visitors ---------- */
+const LIVE_SOURCES = ['ad', 'instagram', 'facebook', 'google', 'other', 'direct'];
+const LIVE_DEVICES = ['mobile', 'desktop'];
+
+// keeps one anonymous row per open tab; a bad or odd signal is simply ignored
+async function recordLive(text, request, env) {
+  let m;
+  try { m = JSON.parse(String(text).slice(0, 500)); } catch { return; }
+  if (!m || !/^[A-Za-z0-9]{16,32}$/.test(m.id || '')) return;
+  const DB = await database(env);
+  if (!DB) return;
+  if (m.t === 'leave') {
+    await DB.prepare('DELETE FROM live_sessions WHERE id = ?1').bind(m.id).run();
+    return;
+  }
+  const t = Date.now();
+  const place = /^[a-z0-9:_-]{1,40}$/.test(m.p || '') ? m.p : null;
+  const source = LIVE_SOURCES.includes(m.s) ? m.s : 'other';
+  const device = LIVE_DEVICES.includes(m.d) ? m.d : null;
+  const country = /^[A-Z]{2}$/.test(request.headers.get('CF-IPCountry') || '') ? request.headers.get('CF-IPCountry') : null;
+  await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country)
+      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6)
+      ON CONFLICT (id) DO UPDATE SET last_seen = ?2, place = ?3`)
+    .bind(m.id, t, place, source, device, country).run();
+  if (Math.random() < 0.02) await DB.prepare('DELETE FROM live_sessions WHERE last_seen < ?1').bind(t - 3600000).run();
+}
 
 /* ---------- PayPal helpers ---------- */
 function apiBase(env) {
@@ -182,9 +224,19 @@ async function database(env) {
         capi_sent_at    TEXT
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS orders_paypal ON orders (paypal_order_id)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS live_sessions (
+        id         TEXT PRIMARY KEY,
+        first_seen INTEGER NOT NULL,
+        last_seen  INTEGER NOT NULL,
+        place      TEXT,
+        source     TEXT,
+        device     TEXT,
+        country    TEXT
+      )`),
+      env.DB.prepare(`CREATE INDEX IF NOT EXISTS live_sessions_seen ON live_sessions (last_seen)`),
     ]).then(async () => {
       // columns added later; a table made before them gets them here (an error means it already has them)
-      for (const col of ['meta TEXT', 'capi_sent_at TEXT']) {
+      for (const col of ['meta TEXT', 'capi_sent_at TEXT', 'paypal_fee REAL', 'paypal_net REAL']) {
         await env.DB.prepare('ALTER TABLE orders ADD COLUMN ' + col).run().catch(() => {});
       }
     }).catch(err => { schemaReady = null; throw err; });
@@ -362,9 +414,17 @@ async function syncOrder(order, env) {
     const paidAt = status === 'payment_pending' || status === 'failed' ? null : (cap.create_time || t);
     const amount = cap.amount ? Number(cap.amount.value) : null;
     const payer = (order.payer && order.payer.email_address) || null;
+    // what PayPal kept as its fee and what reached the account (USD), shown on the business dashboard
+    const breakdown = cap.seller_receivable_breakdown || {};
+    const fee = breakdown.paypal_fee ? Number(breakdown.paypal_fee.value) : null;
+    const net = breakdown.net_amount ? Number(breakdown.net_amount.value) : null;
     const row = await DB.prepare(`SELECT status FROM orders WHERE paypal_order_id = ?1`).bind(order.id).first();
 
     if (row) {
+      if (fee !== null) {
+        await DB.prepare(`UPDATE orders SET paypal_fee = ?2, paypal_net = ?3 WHERE paypal_order_id = ?1 AND paypal_fee IS NULL`)
+          .bind(order.id, fee, net).run();
+      }
       // already paid: a repeat notification only retries a sale Meta has not received yet
       if (status === 'paid' && row.status === 'paid') return reportPurchase(DB, order.id, env);
       if ((STATUS_RANK[status] || 0) <= (STATUS_RANK[row.status] || 0)) return;
@@ -375,10 +435,10 @@ async function syncOrder(order, env) {
     } else {
       // an order this database never saw (its number came from the fallback): keep it anyway
       await DB.prepare(`INSERT OR IGNORE INTO orders (ref, kind, status, service, email, total, paypal_order_id, capture_id,
-                          amount_paid, payer_email, created_at, updated_at, paid_at)
-                        VALUES (?1, 'booking', ?2, ?3, ?4, ?5, ?6, ?7, ?5, ?8, ?9, ?9, ?10)`)
+                          amount_paid, payer_email, created_at, updated_at, paid_at, paypal_fee, paypal_net)
+                        VALUES (?1, 'booking', ?2, ?3, ?4, ?5, ?6, ?7, ?5, ?8, ?9, ?9, ?10, ?11, ?12)`)
         .bind(clip(unit.reference_id || unit.invoice_id || order.id, 40), status, clip(unit.description, 127) || null,
-              clip(unit.custom_id, 127) || null, amount, order.id, cap.id || null, payer, t, paidAt).run();
+              clip(unit.custom_id, 127) || null, amount, order.id, cap.id || null, payer, t, paidAt, fee, net).run();
     }
   } catch (err) {
     console.error('could not record payment for PayPal order', order && order.id, err);

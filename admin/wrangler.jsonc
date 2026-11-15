@@ -1,0 +1,28 @@
+// Deploy settings for the private business dashboard. From this folder: npx wrangler deploy
+// Secrets live only in Cloudflare (never in this file, the repo is public):
+//   DASH_PATH           the secret code in the link        (node setup.mjs link)
+//   DASH_SESSION_KEY    signs the sign-in cookie           (node setup.mjs link)
+//   DASH_PASSWORD_HASH  the password, hashed (PBKDF2)      (node setup.mjs password)
+//   META_TOKEN          Meta system-user token, ads_read   (npx wrangler secret put META_TOKEN)
+{
+  "name": "evx-reports",
+  "main": "admin-worker.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "hq.evoxelmusic.com", "custom_domain": true }
+  ],
+  // pulls ad spend and visits from Meta every 3 hours
+  "triggers": { "crons": ["0 */3 * * *"] },
+  "vars": {
+    "USD_ILS": "3.7",
+    "META_API_VERSION": "v23.0",
+    "META_AD_ACCOUNT": "606837333350044",
+    "META_PIXEL_ID": "1162658383094059",
+    "META_CAMPAIGN_FILTER": "Site"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "evoxel-orders", "database_id": "533489a4-b3b5-46f9-8334-0ced4d1d2d38" }
+  ]
+}
