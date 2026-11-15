@@ -51,7 +51,8 @@
    - One row per visit in live_sessions, updated in place; rows older
      than an hour are deleted, so the table stays tiny.
    - Each new visit also adds one to site_visits_daily (Israel date ×
-     source × device), the dashboard's visitor history. A tab that comes
+     source × device) and to site_visits_geo (Israel date × country ×
+     city, both from Cloudflare), the dashboard's visitor history. A tab that comes
      back within the hour is the same visit, so "left" only moves the row
      out of the live window instead of deleting it.
 
@@ -163,15 +164,21 @@ async function recordLive(text, request, env) {
   const place = /^[a-z0-9:_-]{1,40}$/.test(m.p || '') ? m.p : null;
   const source = LIVE_SOURCES.includes(m.s) ? m.s : 'other';
   const device = LIVE_DEVICES.includes(m.d) ? m.d : null;
-  const country = /^[A-Z]{2}$/.test(request.headers.get('CF-IPCountry') || '') ? request.headers.get('CF-IPCountry') : null;
-  const created = await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country)
-      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (id) DO NOTHING`)
-    .bind(m.id, t, place, source, device, country).run();
+  const cc = (request.cf && request.cf.country) || request.headers.get('CF-IPCountry') || '';
+  const country = /^[A-Z]{2}$/.test(cc) ? cc : null;
+  const city = request.cf && request.cf.city ? String(request.cf.city).slice(0, 60) : null;
+  const created = await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country, city)
+      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (id) DO NOTHING`)
+    .bind(m.id, t, place, source, device, country, city).run();
   if (created.meta && created.meta.changes) {
-    // a new visit: count it for today (Israel date)
+    // a new visit: count it for today (Israel date), by source and device and by place
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(t));
-    await DB.prepare(`INSERT INTO site_visits_daily (date, source, device, visits) VALUES (?1, ?2, ?3, 1)
-        ON CONFLICT (date, source, device) DO UPDATE SET visits = visits + 1`).bind(day, source, device || 'desktop').run();
+    await DB.batch([
+      DB.prepare(`INSERT INTO site_visits_daily (date, source, device, visits) VALUES (?1, ?2, ?3, 1)
+          ON CONFLICT (date, source, device) DO UPDATE SET visits = visits + 1`).bind(day, source, device || 'desktop'),
+      DB.prepare(`INSERT INTO site_visits_geo (date, country, city, visits) VALUES (?1, ?2, ?3, 1)
+          ON CONFLICT (date, country, city) DO UPDATE SET visits = visits + 1`).bind(day, country || '??', city || ''),
+    ]);
   } else {
     await DB.prepare('UPDATE live_sessions SET last_seen = ?2, place = ?3 WHERE id = ?1').bind(m.id, t, place).run();
   }
@@ -246,6 +253,13 @@ async function database(env) {
         country    TEXT
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS live_sessions_seen ON live_sessions (last_seen)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_visits_geo (
+        date    TEXT NOT NULL,
+        country TEXT NOT NULL,
+        city    TEXT NOT NULL,
+        visits  INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (date, country, city)
+      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_visits_daily (
         date   TEXT NOT NULL,
         source TEXT NOT NULL,
@@ -258,6 +272,7 @@ async function database(env) {
       for (const col of ['meta TEXT', 'capi_sent_at TEXT', 'paypal_fee REAL', 'paypal_net REAL']) {
         await env.DB.prepare('ALTER TABLE orders ADD COLUMN ' + col).run().catch(() => {});
       }
+      await env.DB.prepare('ALTER TABLE live_sessions ADD COLUMN city TEXT').run().catch(() => {});
     }).catch(err => { schemaReady = null; throw err; });
   }
   await schemaReady;

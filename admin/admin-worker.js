@@ -24,6 +24,7 @@
    - POST /logout           signs out
    - GET  /api/summary      the dashboard's data for ?from=YYYY-MM-DD&to=YYYY-MM-DD
    - POST /api/refresh      pulls from Meta now instead of waiting for the next run
+   - POST /api/dismiss      marks tasks as handled ({keys: [...]}); they stay hidden
    - GET  /api/live         who is on the site right now (signals from assets/live.js,
                             kept by the checkout Worker in live_sessions)
 
@@ -74,6 +75,10 @@ export default {
       if (rest === '/api/summary' && request.method === 'GET') {
         if (!signedIn) return json({ error: 'signed_out' }, 401);
         return json(await summary(url, env));
+      }
+      if (rest === '/api/dismiss' && request.method === 'POST') {
+        if (!signedIn) return json({ error: 'signed_out' }, 401);
+        return json(await dismiss(await request.json().catch(() => ({})), env));
       }
       if (rest === '/api/live' && request.method === 'GET') {
         if (!signedIn) return json({ error: 'signed_out' }, 401);
@@ -276,6 +281,7 @@ async function database(env) {
         updated_at  TEXT NOT NULL,
         PRIMARY KEY (date, campaign_id)
       )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_dismissed (key TEXT PRIMARY KEY, at TEXT NOT NULL)`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_sync (
         source  TEXT PRIMARY KEY,
         ok      INTEGER NOT NULL,
@@ -298,9 +304,46 @@ const LIVE_WINDOW_MS = 90000;   // a visit counts as live for 90 s after its las
 
 async function liveNow(env) {
   const since = Date.now() - LIVE_WINDOW_MS;
-  const rows = await env.DB.prepare(`SELECT place, source, device, country, first_seen FROM live_sessions
+  const rows = await env.DB.prepare(`SELECT place, source, device, country, city, first_seen FROM live_sessions
       WHERE last_seen > ?1 ORDER BY first_seen`).bind(since).all().then((r) => r.results).catch(() => []);
   return { at: new Date().toISOString(), count: rows.length, visits: rows.map((r) => ({ ...r, minutes: Math.max(0, Math.round((Date.now() - r.first_seen) / 60000)) })) };
+}
+
+/* ---------- tasks: only things there is something to do about ---------- */
+// Not tasks: checkouts that were opened and never paid, or ad spend without a sale; the funnel and the
+// headline show those. Each task has a stable key, so once dismissed it stays hidden; a new event is a new key.
+const TASK_DAYS = 60;
+
+async function tasks(DB, env, syncs) {
+  const since = new Date(Date.now() - TASK_DAYS * 86400000).toISOString();
+  const rows = await DB.prepare(`SELECT ref, status, service, artist, track, amount_paid, paid_at, updated_at FROM orders
+      WHERE kind = 'booking' AND status IN ('paid', 'payment_pending', 'partially_refunded', 'refunded', 'reversed')
+        AND COALESCE(paid_at, updated_at) >= ? ORDER BY COALESCE(paid_at, updated_at) DESC LIMIT 100`)
+    .bind(since).all().then((r) => r.results).catch(() => []);
+  const list = [];
+  for (const o of rows) {
+    const who = [o.artist, o.track].filter(Boolean).join(' – ');
+    if (o.status === 'paid') list.push({ key: 'order:' + o.ref, kind: 'order', at: o.paid_at, text: 'הזמנה חדשה: ' + (o.service || 'שירות') + (who ? ' · ' + who : '') + ' (' + o.ref + ')' });
+    else if (o.status === 'payment_pending') list.push({ key: 'pending:' + o.ref, kind: 'warn', at: o.updated_at, text: 'התשלום של ' + o.ref + ' ממתין לאישור של PayPal. כדאי לבדוק בחשבון PayPal.' });
+    else list.push({ key: 'refund:' + o.ref + ':' + o.status, kind: 'bad', at: o.updated_at, text: (o.status === 'reversed' ? 'ביטול דרך הבנק' : o.status === 'refunded' ? 'החזר מלא' : 'החזר חלקי') + ' בהזמנה ' + o.ref + (who ? ' · ' + who : '') });
+  }
+  const meta = syncs.adSpend;
+  if (!env.META_TOKEN) list.push({ key: 'meta:none', kind: 'warn', text: 'מטא לא מחובר, אז ההוצאה על מודעות חסרה.' });
+  else if (meta && !meta.ok) list.push({ key: 'meta:' + meta.at, kind: 'bad', at: meta.at, text: 'העדכון ממטא נכשל: ' + meta.message });
+  if (!list.length) return [];
+  const done = new Set((await DB.prepare(`SELECT key FROM admin_dismissed WHERE key IN (${list.map(() => '?').join(',')})`)
+    .bind(...list.map((t) => t.key)).all()).results.map((r) => r.key));
+  return list.filter((t) => !done.has(t.key));
+}
+
+async function dismiss(body, env) {
+  const keys = (Array.isArray(body.keys) ? body.keys : []).filter((k) => typeof k === 'string' && /^[a-z]+:[A-Za-z0-9:._-]{1,80}$/.test(k)).slice(0, 100);
+  const DB = await database(env);
+  if (keys.length) {
+    const at = new Date().toISOString();
+    await DB.batch(keys.map((k) => DB.prepare('INSERT OR IGNORE INTO admin_dismissed (key, at) VALUES (?1, ?2)').bind(k, at)));
+  }
+  return { ok: true, dismissed: keys.length };
 }
 
 /* ---------- the dashboard's data ---------- */
@@ -334,6 +377,14 @@ async function summary(url, env) {
       WHERE date >= ? AND date <= ? GROUP BY source ORDER BY visits DESC`)
     .bind(from, to).all().then((r) => r.results).catch(() => []);
 
+  // where visits came from: countries and the busiest cities
+  const countries = await DB.prepare(`SELECT country, SUM(visits) AS visits FROM site_visits_geo
+      WHERE date >= ? AND date <= ? GROUP BY country ORDER BY visits DESC LIMIT 8`)
+    .bind(from, to).all().then((r) => r.results).catch(() => []);
+  const cities = await DB.prepare(`SELECT country, city, SUM(visits) AS visits FROM site_visits_geo
+      WHERE date >= ? AND date <= ? AND city != '' GROUP BY country, city ORDER BY visits DESC LIMIT 8`)
+    .bind(from, to).all().then((r) => r.results).catch(() => []);
+
   const syncs = Object.fromEntries((await DB.prepare('SELECT source, ok, at, message FROM admin_sync').all()).results
     .map((s) => [s.source, s]));
   const metaSource = (key) => {
@@ -353,6 +404,9 @@ async function summary(url, env) {
     adSpend,
     visits,
     visitSources,
+    countries,
+    cities,
+    tasks: await tasks(DB, env, syncs),
     sources: {
       orders: { connected: true },
       adSpend: metaSource('adSpend'),
@@ -394,7 +448,7 @@ function page(render, base, env, data = {}, status = 200) {
   const headers = {
     ...baseHeaders('text/html; charset=utf-8'),
     'Content-Security-Policy': [
-      "default-src 'none'", `script-src 'nonce-${nonce}'`, `style-src 'nonce-${nonce}'`,
+      "default-src 'none'", `script-src 'nonce-${nonce}'`, `style-src 'nonce-${nonce}' https://fonts.googleapis.com`, 'font-src https://fonts.gstatic.com',
       "connect-src 'self'", "img-src data:", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'",
     ].join('; '),
   };
