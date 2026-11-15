@@ -40,13 +40,21 @@
   function source() {
     var q = new URLSearchParams(location.search);
     var src = (q.get('utm_source') || '').toLowerCase(), med = (q.get('utm_medium') || '').toLowerCase();
-    if (/paid|cpc|ads?$|ppc|social_paid/.test(med) || (src && q.get('fbclid')) ) return 'ad';
+    // ads carry utm_medium=paid and the placement Meta fills in ({{placement}}: Instagram_Reels, Instagram_Stories…)
+    var where = (q.get('placement') || q.get('utm_content') || '').toLowerCase();
+    var adKind = function () {
+      if (/reel/.test(where)) return 'ad_reels';
+      if (/stor/.test(where)) return 'ad_stories';
+      if (/feed|explore/.test(where)) return 'ad_feed';
+      return 'ad';
+    };
+    if (/paid|cpc|ppc|ads?$/.test(med) || /^(meta|fb|ig|facebook|instagram)[_-]?ads?$/.test(src) || (src && q.get('fbclid')) || (q.get('placement') && q.get('fbclid'))) return adKind();
     var ref = '';
     try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
     if (ref === location.hostname) ref = '';
     if (/instagram/.test(ref) || /^(ig|instagram)$/.test(src)) return 'instagram';
-    if (/facebook|fb\.|messenger/.test(ref) || /^(fb|facebook)$/.test(src)) return q.get('fbclid') ? 'ad' : 'facebook';
-    if (q.get('fbclid')) return 'ad';
+    if (/facebook|fb\.|messenger/.test(ref) || /^(fb|facebook)$/.test(src)) return q.get('fbclid') ? adKind() : 'facebook';
+    if (q.get('fbclid')) return adKind();
     if (/google\./.test(ref) || q.get('gclid')) return 'google';
     if (ref || src) return 'other';
     return 'direct';

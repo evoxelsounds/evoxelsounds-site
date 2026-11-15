@@ -33,6 +33,9 @@ const ICON = {
 };
 const icon = (name, size = 16) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
 
+// the site's own logo, served by the site
+const LOGO = 'https://evoxelmusic.com/assets/logo.webp';
+
 const FONTS = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600&family=Heebo:wght@400;500;600;700;800&display=swap">';
 
 /* ---------- shared look (the site's tokens) ---------- */
@@ -68,8 +71,7 @@ export function loginPage({ base, nonce, error }) {
 <title>כניסה</title>${FONTS}<style nonce="${nonce}">${STYLE}
 main{position:relative;z-index:1;min-height:100vh;display:grid;place-items:center;padding:16px}
 form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;padding:28px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface)}
-.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;letter-spacing:.08em;font-size:13px}
-.brand .ic{color:var(--accent)}
+.brand img{display:block;height:30px;width:auto}
 h1{margin:4px 0 0;font-family:var(--display);font-size:22px;font-weight:800}
 label{display:flex;flex-direction:column;gap:6px;color:var(--dim);font-size:13px}
 input{padding:11px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg-2);direction:ltr}
@@ -77,7 +79,7 @@ button{padding:12px;border-radius:100px;border:0;background:var(--accent);color:
 .err{margin:0;color:var(--bad);font-size:13px}
 </style></head><body><main>
 <form method="post" action="${esc(base)}/login" autocomplete="on">
-  <div class="brand">${icon('logo', 20)}EVOXEL SOUNDS</div>
+  <div class="brand"><img src="${LOGO}" alt="EVOXEL SOUNDS" width="150" height="34"></div>
   <h1>כניסה לדשבורד</h1>
   <label for="pw">סיסמה<input id="pw" name="password" type="password" autocomplete="current-password" required autofocus maxlength="200"></label>
   ${msg ? `<p class="err" role="alert">${msg}</p>` : ''}
@@ -95,8 +97,8 @@ export function dashboardPage({ base, nonce }) {
 
 /* side menu */
 .side{flex:1 1 228px;max-width:248px;min-width:210px;padding:22px 14px;border-inline-end:1px solid var(--line);background:rgba(12,10,16,.85);display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
-.brand{display:flex;align-items:center;gap:9px;margin:2px 8px 6px;font-family:var(--display);font-weight:800;letter-spacing:.08em;font-size:13px}
-.brand .ic{color:var(--accent)}
+.brand{display:flex;align-items:center;margin:2px 8px 8px}
+.brand img{display:block;height:30px;width:auto}
 .grp{display:flex;flex-direction:column;gap:2px}
 .grp>span{padding:0 10px 6px;font-size:11px;letter-spacing:.1em;color:var(--mute)}
 .nav-a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--dim);text-decoration:none;font-size:14px}
@@ -143,6 +145,7 @@ export function dashboardPage({ base, nonce }) {
 .menu .lbl{font-size:11px;letter-spacing:.1em;color:var(--mute)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:6px 12px;border-radius:100px;border:1px solid var(--line-2);background:transparent;color:var(--dim);font-size:13px;cursor:pointer}
+.chip:disabled{opacity:.4;cursor:default}
 .chip[aria-pressed=true]{border-color:var(--accent);background:rgba(230,162,60,.12);color:var(--text)}
 .fields{display:flex;gap:8px;flex-wrap:wrap}
 .fields label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);flex:1;min-width:120px}
@@ -177,6 +180,15 @@ export function dashboardPage({ base, nonce }) {
 .tip b{color:var(--text);font-size:13px}
 .tip .val{align-self:flex-start;padding:2px 8px;border-radius:6px;background:var(--surface-2);font-family:var(--display);font-weight:600;font-size:15px;color:var(--text)}
 .tip .val.prev{color:var(--dim)}
+.extra{margin-top:12px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.extra>span{font-size:11px;letter-spacing:.1em;color:var(--mute)}
+.brk{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:12px;align-items:center;font-size:13px}
+.brk .bar{height:6px;border-radius:100px;background:var(--surface-2)}
+.brk .bar i{display:block;height:100%;border-radius:100px;background:var(--accent)}
+.brk .val{white-space:nowrap}
+.brk b{font-family:var(--display);font-weight:600}
+.brk small{color:var(--mute);font-weight:400;font-size:12px;margin-inline-start:8px}
+.extra .empty{font-size:13px}
 
 /* cards */
 .card{padding:20px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -275,7 +287,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
 </style></head><body class="loading">
 <div class="app">
   <nav class="side" aria-label="תפריט">
-    <div class="brand">${icon('logo', 20)}EVOXEL SOUNDS</div>
+    <a class="brand" href="https://evoxelmusic.com/" target="_blank" rel="noopener"><img src="${LOGO}" alt="EVOXEL SOUNDS" width="150" height="34"></a>
     <div class="grp">${navLink('overview', 'home', 'סקירה')}</div>
     <div class="grp"><span>כסף</span>${navLink('metrics', 'profit', 'רווח והכנסות')}${navLink('campaigns', 'megaphone', 'קמפיינים')}</div>
     <div class="grp"><span>קהל</span>${navLink('geo', 'globe', 'מאיפה המבקרים')}${navLink('funnel', 'funnel', 'משפך')}${navLink('live', 'live', 'עכשיו באתר', '<span class="tag num" id="nav-live"></span>')}</div>
@@ -294,6 +306,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
         <div class="menu" id="range-menu" hidden>
           <span class="lbl">טווח</span>
           <div class="chips">
+            <button type="button" class="chip" data-preset="24h">24 שעות</button>
             <button type="button" class="chip" data-preset="7">7 ימים</button>
             <button type="button" class="chip" data-preset="28">28 ימים</button>
             <button type="button" class="chip" data-preset="month">החודש</button>
@@ -328,6 +341,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
         <div class="s" id="pop-desc"></div>
         <div class="chart" id="pop-chart"></div>
         <div class="legend"><span><i class="sw-cur"></i><span id="pop-cur-range"></span></span><span><i class="sw-prev"></i><span id="pop-prev-range"></span></span></div>
+        <div class="extra" id="pop-extra" hidden></div>
       </div>
     </div>
 
@@ -370,6 +384,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
         <div class="head"><h2>קמפיינים במטא</h2><small id="camp-n"></small></div>
         <div class="tw"><table><thead><tr><th>קמפיין</th><th>הוצאה</th><th>קליקים</th></tr></thead><tbody id="camp-rows"></tbody></table></div>
         <p class="empty" id="camp-empty" hidden>אין הוצאה על מודעות בתקופה הזו.</p>
+        <div class="extra" id="placements" hidden></div>
       </article>
     </section>
 
@@ -389,6 +404,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       <li>מודעות: חשבון Evoxel Music במטא, רק קמפיינים שבשמם מופיע "Site". מתעדכן כל 3 שעות או בכפתור הרענון.</li>
       <li>ביקורים: האתר סופר אותם בעצמו, ביקור לכל לשונית פתוחה (חזרה תוך שעה היא אותו ביקור), לפי תאריך בישראל. מדינה ועיר לפי Cloudflare, בלי לשמור כתובת IP. נספרים גם מי שלא אישרו עוגיות.</li>
       <li>השוואה: מול תקופה באותו אורך שקדמה לה. המרה: הזמנות ששולמו חלקי ביקורים.</li>
+      <li>מיקום המודעה (רילס, סטורי, פיד): ההוצאה והקליקים לפי מיקום באים ממטא. ביקור נספר כ"מודעה · רילס" או "מודעה · סטורי" כשהקישור במודעה כולל את התג {{placement}} של מטא.</li>
       <li>לטיפול: רק דברים שיש מה לעשות איתם: הזמנה חדשה לביצוע, תשלום שממתין, החזר, או תקלה עם מטא. מי שהתחיל הזמנה ולא סיים מופיע במשפך, לא כמשימה.</li>
     </ul></details>
   </main>
@@ -418,7 +434,18 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   $$('.sw-cur').forEach((e) => { e.style.background = C.accent; });
   $$('.sw-prev').forEach((e) => { e.style.background = C.prev; });
 
-  const state = { from: iso(new Date(today - 27 * DAY)), to: iso(today), grain: store.get('grain') || 'day', rate: Number(store.get('rate')) || null, data: null, prev: null, open: null };
+  const state = { mode: 'days', from: iso(new Date(today - 27 * DAY)), to: iso(today), grain: store.get('grain') || 'day', rate: Number(store.get('rate')) || null, data: null, prev: null, open: null };
+  const HOUR = 3600000;
+  const jerFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const jerParts = (ms) => Object.fromEntries(jerFmt.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  const jerHour = (ms) => { const p = jerParts(ms); return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour; };
+  const jerStamp = (isoStr) => { const p = jerParts(Date.parse(isoStr)); return p.day + '.' + p.month + '.' + p.year.slice(2) + ' ' + p.hour + ':' + p.minute; };
+  // a bucket's name on an axis (short) or in a tooltip (full)
+  const periodLabel = (p, full) => {
+    if (p.length > 10) return full ? dmy(p.slice(0, 10)) + ' · ' + p.slice(11, 13) + ':00' : p.slice(11, 13) + ':00';
+    if (!full) return state.grain.includes('month') ? p.slice(5, 7) + '/' + p.slice(2, 4) : p.slice(8, 10) + '.' + p.slice(5, 7);
+    return (state.grain === 'week' ? 'שבוע מ־' : '') + dmy(p);
+  };
   const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
   const fmt = {
     ils: (v) => v == null ? '—' : (v < 0 ? '−' : '') + '₪' + nf.format(Math.abs(v)),
@@ -429,7 +456,9 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   };
   const dmy = (s) => s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(2, 4);
   const regionName = (() => { try { const dn = new Intl.DisplayNames(['he'], { type: 'region' }); return (c) => { try { return dn.of(c); } catch { return c; } }; } catch { return (c) => c; } })();
-  const SRC = { ad: 'מודעה', instagram: 'אינסטגרם', facebook: 'פייסבוק', google: 'גוגל', other: 'אתר אחר', direct: 'ישיר' };
+  const SRC = { ad: 'מודעה', ad_reels: 'מודעה · רילס', ad_stories: 'מודעה · סטורי', ad_feed: 'מודעה · פיד', instagram: 'אינסטגרם', facebook: 'פייסבוק', google: 'גוגל', other: 'אתר אחר', direct: 'ישיר' };
+  const PLATFORM = { instagram: 'אינסטגרם', facebook: 'פייסבוק', messenger: 'מסנג׳ר', audience_network: 'Audience Network', threads: 'Threads' };
+  const placeName = (pl, pos) => (PLATFORM[pl] || pl) + ' · ' + (/reel/.test(pos) ? 'רילס' : /stor/.test(pos) ? 'סטורי' : /feed/.test(pos) ? 'פיד' : /explore/.test(pos) ? 'אקספלור' : /search/.test(pos) ? 'חיפוש' : String(pos).replace(/_/g, ' '));
   const PLACE = { home: 'דף הבית', services: 'שירותים', credits: 'קרדיטים', work: 'עבודות', about: 'אודות', contact: 'צור קשר', faq: 'שאלות', footer: 'תחתית', book: 'הזמנה', 'book:1': 'הזמנה · בחירת שירות', 'book:2': 'הזמנה · פרטי הטרק', 'book:3': 'הזמנה · תשלום', 'book:4': 'הזמנה · סיום' };
 
   function keyOf(s) {
@@ -444,14 +473,20 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   function build(D, from, to) {
     const rate = state.rate || D.usdIls;
     const buckets = new Map();
-    for (let t = Date.parse(from); t <= Date.parse(to); t += DAY) {
-      const k = keyOf(iso(new Date(t)));
-      if (!buckets.has(k)) buckets.set(k, { period: k, revenue_usd: 0, fees_usd: 0, spend: 0, orders: 0, visits: 0, desktop: 0, mobile: 0 });
+    const empty = (k) => ({ period: k, revenue_usd: 0, fees_usd: 0, spend: 0, orders: 0, visits: 0, desktop: 0, mobile: 0 });
+    const hours = D.mode === 'hours';
+    if (hours) for (let i = 23; i >= 0; i--) { const k = jerHour(D.toMs - i * HOUR); if (!buckets.has(k)) buckets.set(k, empty(k)); }
+    else for (let t = Date.parse(from); t <= Date.parse(to); t += DAY) { const k = keyOf(iso(new Date(t))); if (!buckets.has(k)) buckets.set(k, empty(k)); }
+    const byDay = (s) => buckets.get(keyOf(s));
+    const spendOf = (r) => r.currency === 'USD' ? r.spend * rate : r.spend;
+    for (const r of D.adSpend) { const b = hours ? buckets.get(r.hour) : byDay(r.date); if (b) b.spend += spendOf(r); }
+    if (hours) for (const v of (D.visitTimes || [])) { const b = buckets.get(jerHour(v.t)); if (b) { b.visits++; if (v.device === 'mobile') b.mobile++; else b.desktop++; } }
+    else for (const r of D.visits) { const b = byDay(r.date); if (b) { b.desktop += r.desktop; b.mobile += r.mobile; b.visits += r.total; } }
+    for (const o of D.orders) {
+      if (!D.revenueStatuses.includes(o.status)) continue;
+      const b = hours ? buckets.get(jerHour(Date.parse(o.paid_at))) : byDay(String(o.paid_at).slice(0, 10));
+      if (b) { b.orders++; b.revenue_usd += o.amount_usd; b.fees_usd += o.fee_usd || 0; }
     }
-    const at = (s) => buckets.get(keyOf(s));
-    for (const r of D.adSpend) { const b = at(r.date); if (b) b.spend += r.currency === 'USD' ? r.spend * rate : r.spend; }
-    for (const r of D.visits) { const b = at(r.date); if (b) { b.desktop += r.desktop; b.mobile += r.mobile; b.visits += r.total; } }
-    for (const o of D.orders) { if (!D.revenueStatuses.includes(o.status)) continue; const b = at(String(o.paid_at).slice(0, 10)); if (b) { b.orders++; b.revenue_usd += o.amount_usd; b.fees_usd += o.fee_usd || 0; } }
     const series = [...buckets.values()].map((b) => {
       const revenue = b.revenue_usd * rate, fees = b.fees_usd * rate;
       return { ...b, revenue, fees, profit: revenue - fees - b.spend, conv: b.visits ? b.orders / b.visits : 0 };
@@ -570,10 +605,11 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     $('#pop-big').textContent = off ? '—' : fmt[m.f](built.t[m.key]);
     $('#pop-title').textContent = m.label + ' לאורך זמן';
     $('#pop-desc').textContent = m.desc;
-    $('#pop-cur-range').textContent = dmy(state.from) + ' – ' + dmy(state.to);
-    $('#pop-prev-range').textContent = dmy(state.prevFrom) + ' – ' + dmy(state.prevTo);
+    $('#pop-cur-range').textContent = state.mode === 'hours' ? '24 השעות האחרונות' : dmy(state.from) + ' – ' + dmy(state.to);
+    $('#pop-prev-range').textContent = state.mode === 'hours' ? '24 השעות שלפניהן' : dmy(state.prevFrom) + ' – ' + dmy(state.prevTo);
     pop.setAttribute('aria-label', m.label + ' לאורך זמן');
     pop.hidden = false;
+    drawBreakdown(m);
     const box = $('#pop-chart'); box.replaceChildren();
     if (off) { box.appendChild(el('p', 'empty', 'מטא עוד לא מחובר.')); return; }
     const cur = built.series.map((r) => r[m.key]);
@@ -597,7 +633,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       if (i % every !== 0 && i !== n - 1) return;
       if (i !== n - 1 && n - 1 - i < every / 2) return;
       const t = svgEl('text', { x: x(i), y: 186, 'text-anchor': i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle' }, svg);
-      t.textContent = state.grain.includes('month') ? p.slice(5, 7) + '/' + p.slice(2, 4) : p.slice(8, 10) + '.' + p.slice(5, 7);
+      t.textContent = periodLabel(p, false);
     });
     if (prevS.length) svgEl('path', { d: smooth(prevS.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: C.prev, 'stroke-width': 2, 'stroke-dasharray': '2 6', 'stroke-linecap': 'round' }, svg);
     svgEl('path', { d: smooth(cur.map((v, i) => [x(i), y(v)])), fill: 'none', stroke: C.accent, 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg);
@@ -612,10 +648,10 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(cur[i])); dot.setAttribute('visibility', 'visible');
       tip.replaceChildren();
       tip.appendChild(el('b', '', m.label));
-      const l1 = el('span'); const i1 = el('i'); i1.style.background = C.accent; l1.append(i1, (state.grain === 'week' ? 'שבוע מ־' : '') + dmy(labels[i])); tip.appendChild(l1);
+      const l1 = el('span'); const i1 = el('i'); i1.style.background = C.accent; l1.append(i1, periodLabel(labels[i], true)); tip.appendChild(l1);
       tip.appendChild(el('span', 'val num', fmt[m.f](cur[i])));
       if (prevS.length && i < prevS.length) {
-        const l2 = el('span'); const i2 = el('i'); i2.style.background = C.prev; l2.append(i2, dmy(prevLabels[i])); tip.appendChild(l2);
+        const l2 = el('span'); const i2 = el('i'); i2.style.background = C.prev; l2.append(i2, periodLabel(prevLabels[i], true)); tip.appendChild(l2);
         tip.appendChild(el('span', 'val prev num', fmt[m.f](prevS[i])));
       }
       tip.hidden = false;
@@ -623,6 +659,39 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       tip.style.left = (left > max ? x(i) / W * r.width - tip.offsetWidth - 14 : left) + 'px';
     });
     svg.addEventListener('pointerleave', () => { tip.hidden = true; guide.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); });
+  }
+
+  // where it came from, inside the window: ad spend by placement, visits by source
+  function breakdownRows(box, rows) {
+    const total = rows.reduce((a, r) => a + r.value, 0) || 1;
+    for (const r of rows) {
+      const row = el('div', 'brk');
+      row.appendChild(el('span', '', r.label));
+      const bar = el('span', 'bar'); const fill = el('i'); fill.style.width = (r.value / total * 100) + '%'; bar.appendChild(fill); row.appendChild(bar);
+      const cell = el('span', 'val'); cell.appendChild(el('b', 'num', r.text)); if (r.note) cell.appendChild(el('small', '', r.note)); row.appendChild(cell);
+      box.appendChild(row);
+    }
+  }
+  function placementRows() {
+    const D = state.data, rate = state.rate || D.usdIls;
+    return (D.placements || []).filter((r) => r.spend > 0 || r.clicks > 0).map((r) => {
+      const spend = r.currency === 'USD' ? r.spend * rate : r.spend;
+      return { label: placeName(r.platform, r.position), value: spend, text: fmt.ils(spend), note: fmt.int(r.clicks) + ' קליקים' + (r.clicks ? ' · ₪' + (spend / r.clicks).toFixed(2) + ' לקליק' : '') };
+    });
+  }
+  function drawBreakdown(m) {
+    const box = $('#pop-extra'); box.replaceChildren(); box.hidden = true;
+    const D = state.data;
+    if (m.id === 'spend' && D.sources.adSpend.connected) {
+      box.hidden = false; box.appendChild(el('span', '', 'לפי מיקום המודעה'));
+      if (state.mode === 'hours') { box.appendChild(el('p', 'empty', 'הפירוט לפי מיקום זמין בטווחים של ימים.')); return; }
+      const rows = placementRows();
+      if (rows.length) breakdownRows(box, rows); else box.appendChild(el('p', 'empty', 'אין הוצאה בתקופה הזו.'));
+    } else if (m.id === 'visits') {
+      const rows = (D.visitSources || []).map((r) => ({ label: SRC[r.source] || r.source, value: r.visits, text: fmt.int(r.visits) }));
+      box.hidden = false; box.appendChild(el('span', '', 'מאיפה נכנסו'));
+      if (rows.length) breakdownRows(box, rows); else box.appendChild(el('p', 'empty', 'עוד אין ביקורים בתקופה הזו.'));
+    }
   }
 
   function render() {
@@ -633,7 +702,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     built = { series: a.series, t: a.t, P: p ? p.t : null, prevSeries: p ? p.series : null };
     const t = a.t, adsOn = D.sources.adSpend.connected;
     const span = Math.round((Date.parse(state.to) - Date.parse(state.from)) / DAY) + 1;
-    $('#compare-label').textContent = 'מול ' + span + ' הימים הקודמים';
+    $('#compare-label').textContent = state.mode === 'hours' ? 'מול 24 השעות הקודמות' : 'מול ' + span + ' הימים הקודמים';
     renderStrip();
     if (state.open) { const o = state.open; state.open = null; openPop(o); }
 
@@ -684,13 +753,17 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     $('#camp-empty').hidden = live.length > 0;
     $('#camp-empty').textContent = adsOn ? 'אין הוצאה על מודעות בתקופה הזו.' : 'מטא עוד לא מחובר.';
     $('#camp-n').textContent = live.length ? fmt.int(live.length) : '';
+    const pBox = $('#placements'); pBox.replaceChildren();
+    const pRows = state.mode === 'hours' ? [] : placementRows();
+    pBox.hidden = !pRows.length;
+    if (pRows.length) { pBox.appendChild(el('span', '', 'לפי מיקום')); breakdownRows(pBox, pRows); }
 
     // clients
     const tbody = $('#rows'); tbody.replaceChildren();
     const statusName = { paid: 'שולם', partially_refunded: 'הוחזר חלקית', refunded: 'הוחזר', reversed: 'בוטל בבנק' };
     for (const o of D.orders) {
       const tr = el('tr');
-      [dmy(String(o.paid_at).slice(0, 10)), o.artist || '—', o.track || '—', o.service || '—', o.options || '—', fmt.usd(o.amount_usd), o.fee_usd == null ? '—' : fmt.usd(o.fee_usd), null, o.ref].forEach((v, i) => {
+      [jerStamp(o.paid_at), o.artist || '—', o.track || '—', o.service || '—', o.options || '—', fmt.usd(o.amount_usd), o.fee_usd == null ? '—' : fmt.usd(o.fee_usd), null, o.ref].forEach((v, i) => {
         const td = el('td', i === 5 || i === 6 ? 'n' : '');
         if (i === 7) td.appendChild(el('span', 'st ' + o.status, statusName[o.status] || o.status)); else td.textContent = v;
         tr.appendChild(td);
@@ -752,12 +825,19 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     if (r.status === 401) { location.reload(); throw new Error('signed out'); }
     return r.json();
   }
+  async function recentData(offset) {
+    const r = await fetch(BASE + '/api/recent?offset=' + offset, { credentials: 'same-origin', cache: 'no-store' });
+    if (r.status === 401) { location.reload(); throw new Error('signed out'); }
+    return r.json();
+  }
   async function load() {
     document.body.classList.add('loading');
     const span = Math.round((Date.parse(state.to) - Date.parse(state.from)) / DAY) + 1;
     state.prevTo = iso(new Date(Date.parse(state.from) - DAY));
     state.prevFrom = iso(new Date(Date.parse(state.from) - span * DAY));
-    const [data, prev] = await Promise.all([summary(state.from, state.to), summary(state.prevFrom, state.prevTo)]);
+    const [data, prev] = state.mode === 'hours'
+      ? await Promise.all([recentData(0), recentData(24)])
+      : await Promise.all([summary(state.from, state.to), summary(state.prevFrom, state.prevTo)]);
     document.body.classList.remove('loading');
     if (data.error) { $('#lede').textContent = 'הטווח לא תקין.'; return; }
     state.data = data; state.prev = prev.error ? null : prev;
@@ -795,6 +875,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   rbtn.addEventListener('click', () => setMenu(menu.hidden));
   document.addEventListener('click', (e) => { if (!menu.hidden && !e.target.closest('.menu-wrap')) setMenu(false); });
   function rangeLabel() {
+    if (state.mode === 'hours') return '24 השעות האחרונות';
     const span = Math.round((Date.parse(state.to) - Date.parse(state.from)) / DAY) + 1, atToday = state.to === iso(today);
     if (atToday && state.from === iso(today).slice(0, 8) + '01') return 'החודש';
     if (atToday && [7, 28, 90, 365].includes(span)) return span === 365 ? 'השנה האחרונה' : span + ' הימים האחרונים';
@@ -805,10 +886,14 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     if (state.rate) $('#rate').value = state.rate;
     $('#range-label').textContent = rangeLabel();
     const span = Math.round((Date.parse(state.to) - Date.parse(state.from)) / DAY) + 1, atToday = state.to === iso(today);
-    $$('[data-preset]').forEach((b) => { const v = b.dataset.preset; b.setAttribute('aria-pressed', String(atToday && (v === 'month' ? state.from === iso(today).slice(0, 8) + '01' : span === Number(v)))); });
+    const hours = state.mode === 'hours';
+    $$('[data-preset]').forEach((b) => { const v = b.dataset.preset; b.setAttribute('aria-pressed', String(v === '24h' ? hours : !hours && atToday && (v === 'month' ? state.from === iso(today).slice(0, 8) + '01' : span === Number(v)))); });
+    $$('[data-grain]').forEach((b) => { b.disabled = hours; });
     $$('[data-grain]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.grain === state.grain)));
   }
   function setRange(v) {
+    if (v === '24h') { state.mode = 'hours'; syncControls(); load(); return; }
+    state.mode = 'days';
     state.to = iso(today);
     state.from = v === 'month' ? iso(today).slice(0, 8) + '01' : iso(new Date(today - (Number(v) - 1) * DAY));
     syncControls(); load();
@@ -818,7 +903,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   $$('[data-grain]').forEach((b) => b.addEventListener('click', () => setGrain(b.dataset.grain)));
   for (const id of ['from', 'to']) $('#' + id).addEventListener('change', (e) => {
     const v = e.target.value; if (!v || !e.target.validity.valid) return;
-    state[id] = v; if (state.from > state.to) { if (id === 'from') state.to = v; else state.from = v; }
+    state.mode = 'days'; state[id] = v; if (state.from > state.to) { if (id === 'from') state.to = v; else state.from = v; }
     syncControls(); load();
   });
   $('#rate').addEventListener('change', (e) => { const n = Number(e.target.value); if (n >= 1 && n <= 10) { state.rate = n; store.set('rate', n); render(); } });
@@ -840,6 +925,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
   const go = (id) => { const t = document.getElementById(id); if (t) { if (t.tagName === 'DETAILS') t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
   function actions() {
     const list = [
+      ['טווח', '24 השעות האחרונות', () => setRange('24h')],
       ['טווח', '7 הימים האחרונים', () => setRange('7')],
       ['טווח', '28 הימים האחרונים', () => setRange('28')],
       ['טווח', 'החודש', () => setRange('month')],

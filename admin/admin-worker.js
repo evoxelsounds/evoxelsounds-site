@@ -24,6 +24,7 @@
    - POST /logout           signs out
    - GET  /api/summary      the dashboard's data for ?from=YYYY-MM-DD&to=YYYY-MM-DD
    - POST /api/refresh      pulls from Meta now instead of waiting for the next run
+   - GET  /api/recent       the same, hour by hour, for the last 24 hours (?offset=24: the 24 before)
    - POST /api/dismiss      marks tasks as handled ({keys: [...]}); they stay hidden
    - GET  /api/live         who is on the site right now (signals from assets/live.js,
                             kept by the checkout Worker in live_sessions)
@@ -72,6 +73,10 @@ export default {
 
       const signedIn = await readSession(request, env);
 
+      if (rest === '/api/recent' && request.method === 'GET') {
+        if (!signedIn) return json({ error: 'signed_out' }, 401);
+        return json(await recent(url, env));
+      }
       if (rest === '/api/summary' && request.method === 'GET') {
         if (!signedIn) return json({ error: 'signed_out' }, 401);
         return json(await summary(url, env));
@@ -152,6 +157,50 @@ async function syncMeta(env) {
     for (let i = 0; i < stmts.length; i += 50) await DB.batch(stmts.slice(i, i + 50));
     await recordSync(DB, 'adSpend', true, `${rows.length} rows since ${since}`);
     result.adSpend = { ok: true, rows: rows.length };
+
+    // where the ads ran: spend and clicks per platform and placement (Instagram Reels, Stories, feed…).
+    // A failure here leaves only this breakdown behind.
+    try {
+      const pRows = await graph(env, `act_${env.META_AD_ACCOUNT}/insights`, {
+        level: 'account', time_increment: '1', limit: '500',
+        fields: 'spend,impressions,inline_link_clicks,account_currency',
+        breakdowns: 'publisher_platform,platform_position',
+        time_range: JSON.stringify({ since, until: utcDay(Date.now()) }),
+        filtering: JSON.stringify([{ field: 'campaign.name', operator: 'CONTAIN', value: env.META_CAMPAIGN_FILTER || 'Site' }]),
+      });
+      const pst = pRows.map((r) => DB.prepare(`INSERT INTO ad_spend_placement (date, platform, position, spend, currency, impressions, clicks, updated_at)
+          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+          ON CONFLICT (date, platform, position) DO UPDATE SET spend = ?4, currency = ?5, impressions = ?6, clicks = ?7, updated_at = ?8`)
+        .bind(r.date_start, String(r.publisher_platform || 'unknown'), String(r.platform_position || 'unknown'), Number(r.spend) || 0,
+          r.account_currency || 'ILS', Number(r.impressions) || 0, Number(r.inline_link_clicks) || 0, now));
+      for (let i = 0; i < pst.length; i += 50) await DB.batch(pst.slice(i, i + 50));
+    } catch (err) {
+      console.error('placement breakdown', err.message);
+      result.placements = { ok: false, message: err.message };
+    }
+
+    // the same by the hour for the last three days, for the "last 24 hours" view. Hours are in the
+    // ad account's time zone (Israel for this account), like the hour keys the page builds.
+    // A failure here only leaves the hourly view behind; the daily numbers above are already saved.
+    try {
+    const hourly = await graph(env, `act_${env.META_AD_ACCOUNT}/insights`, {
+      level: 'campaign', time_increment: '1', limit: '500',
+      fields: 'campaign_id,campaign_name,spend,inline_link_clicks,account_currency',
+      breakdowns: 'hourly_stats_aggregated_by_advertiser_time_zone',
+      time_range: JSON.stringify({ since: utcDay(Date.now() - 3 * DAY_MS), until: utcDay(Date.now()) }),
+      filtering: JSON.stringify([{ field: 'campaign.name', operator: 'CONTAIN', value: env.META_CAMPAIGN_FILTER || 'Site' }]),
+    });
+    const hstmts = hourly.filter((r) => /^\d{2}:/.test(r.hourly_stats_aggregated_by_advertiser_time_zone || '')).map((r) => DB.prepare(`INSERT INTO ad_spend_hourly (hour, campaign_id, campaign, spend, currency, clicks, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        ON CONFLICT (hour, campaign_id) DO UPDATE SET campaign = ?3, spend = ?4, currency = ?5, clicks = ?6, updated_at = ?7`)
+      .bind(r.date_start + 'T' + r.hourly_stats_aggregated_by_advertiser_time_zone.slice(0, 2), String(r.campaign_id), r.campaign_name || null,
+        Number(r.spend) || 0, r.account_currency || 'ILS', Number(r.inline_link_clicks) || 0, now));
+    for (let i = 0; i < hstmts.length; i += 50) await DB.batch(hstmts.slice(i, i + 50));
+    await DB.prepare('DELETE FROM ad_spend_hourly WHERE hour < ?1').bind(utcDay(Date.now() - 4 * DAY_MS)).run();
+    } catch (err) {
+      console.error('hourly ad spend', err.message);
+      result.adSpendHourly = { ok: false, message: err.message };
+    }
   } catch (err) {
     await recordSync(DB, 'adSpend', false, err.message);
     result.adSpend = { ok: false, message: err.message };
@@ -282,6 +331,27 @@ async function database(env) {
         PRIMARY KEY (date, campaign_id)
       )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_dismissed (key TEXT PRIMARY KEY, at TEXT NOT NULL)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS ad_spend_placement (
+        date        TEXT NOT NULL,
+        platform    TEXT NOT NULL,
+        position    TEXT NOT NULL,
+        spend       REAL NOT NULL DEFAULT 0,
+        currency    TEXT NOT NULL DEFAULT 'ILS',
+        impressions INTEGER NOT NULL DEFAULT 0,
+        clicks      INTEGER NOT NULL DEFAULT 0,
+        updated_at  TEXT NOT NULL,
+        PRIMARY KEY (date, platform, position)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS ad_spend_hourly (
+        hour        TEXT NOT NULL,
+        campaign_id TEXT NOT NULL,
+        campaign    TEXT,
+        spend       REAL NOT NULL DEFAULT 0,
+        currency    TEXT NOT NULL DEFAULT 'ILS',
+        clicks      INTEGER NOT NULL DEFAULT 0,
+        updated_at  TEXT NOT NULL,
+        PRIMARY KEY (hour, campaign_id)
+      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS admin_sync (
         source  TEXT PRIMARY KEY,
         ok      INTEGER NOT NULL,
@@ -377,6 +447,11 @@ async function summary(url, env) {
       WHERE date >= ? AND date <= ? GROUP BY source ORDER BY visits DESC`)
     .bind(from, to).all().then((r) => r.results).catch(() => []);
 
+  // where the ads ran, from Meta (spend and clicks per placement)
+  const placements = await DB.prepare(`SELECT platform, position, currency, SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks
+      FROM ad_spend_placement WHERE date >= ? AND date <= ? GROUP BY platform, position, currency ORDER BY spend DESC`)
+    .bind(from, to).all().then((r) => r.results).catch(() => []);
+
   // where visits came from: countries and the busiest cities
   const countries = await DB.prepare(`SELECT country, SUM(visits) AS visits FROM site_visits_geo
       WHERE date >= ? AND date <= ? GROUP BY country ORDER BY visits DESC LIMIT 8`)
@@ -384,15 +459,6 @@ async function summary(url, env) {
   const cities = await DB.prepare(`SELECT country, city, SUM(visits) AS visits FROM site_visits_geo
       WHERE date >= ? AND date <= ? AND city != '' GROUP BY country, city ORDER BY visits DESC LIMIT 8`)
     .bind(from, to).all().then((r) => r.results).catch(() => []);
-
-  const syncs = Object.fromEntries((await DB.prepare('SELECT source, ok, at, message FROM admin_sync').all()).results
-    .map((s) => [s.source, s]));
-  const metaSource = (key) => {
-    const s = syncs[key];
-    if (!env.META_TOKEN) return { connected: false, state: 'not_connected' };
-    if (!s) return { connected: false, state: 'waiting' };
-    return { connected: true, state: s.ok ? 'ok' : 'error', at: s.at, message: s.ok ? null : s.message };
-  };
 
   return {
     generatedAt: new Date().toISOString(),
@@ -404,14 +470,72 @@ async function summary(url, env) {
     adSpend,
     visits,
     visitSources,
+    placements,
     countries,
     cities,
+    ...(await status(DB, env)),
+  };
+}
+
+// where each source stands, and the open tasks (the same whatever range is shown)
+async function status(DB, env) {
+  const syncs = Object.fromEntries((await DB.prepare('SELECT source, ok, at, message FROM admin_sync').all()).results
+    .map((s) => [s.source, s]));
+  const s = syncs.adSpend;
+  const adSpend = !env.META_TOKEN ? { connected: false, state: 'not_connected' }
+    : !s ? { connected: false, state: 'waiting' }
+    : { connected: true, state: s.ok ? 'ok' : 'error', at: s.at, message: s.ok ? null : s.message };
+  return {
     tasks: await tasks(DB, env, syncs),
-    sources: {
-      orders: { connected: true },
-      adSpend: metaSource('adSpend'),
-      visits: { connected: true, state: 'ok', own: true },
-    },
+    sources: { orders: { connected: true }, adSpend, visits: { connected: true, state: 'ok', own: true } },
+  };
+}
+
+/* ---------- the last 24 hours, hour by hour ---------- */
+const HOUR_MS = 3600000;
+const jerHour = (ms) => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}`;
+};
+
+async function recent(url, env) {
+  const offset = Number(url.searchParams.get('offset') || 0);
+  if (offset !== 0 && offset !== 24) return { error: 'bad_range' };
+  const DB = await database(env);
+  const toMs = Date.now() - offset * HOUR_MS, fromMs = toMs - 24 * HOUR_MS;
+  const fromIso = new Date(fromMs).toISOString(), toIso = new Date(toMs).toISOString();
+
+  // each visit of the window (anonymous rows the checkout Worker keeps for two days)
+  const visitRows = await DB.prepare(`SELECT first_seen AS t, source, device, country, city FROM live_sessions
+      WHERE first_seen >= ?1 AND first_seen < ?2`).bind(fromMs, toMs).all().then((r) => r.results).catch(() => []);
+  const orders = await DB.prepare(`SELECT ref, paid_at, artist, track, service, options, amount_paid AS amount_usd,
+      paypal_fee AS fee_usd, status FROM orders WHERE status IN (${SHOWN_STATUSES.map(() => '?').join(',')}) AND paid_at >= ? AND paid_at < ?
+      ORDER BY paid_at DESC`).bind(...SHOWN_STATUSES, fromIso, toIso).all().then((r) => r.results).catch(() => []);
+  const funnel = await DB.prepare(`SELECT status, COUNT(*) AS n FROM orders
+      WHERE kind = 'booking' AND created_at >= ? AND created_at < ? GROUP BY status`)
+    .bind(fromIso, toIso).all().then((r) => r.results).catch(() => []);
+  const adSpend = (await DB.prepare(`SELECT hour, campaign, spend, currency, clicks FROM ad_spend_hourly
+      WHERE hour >= ? AND hour <= ? ORDER BY hour`).bind(jerHour(fromMs), jerHour(toMs)).all()).results;
+
+  const count = (key) => {
+    const m = new Map();
+    for (const v of visitRows) { const k = key(v); if (k) m.set(k, (m.get(k) || 0) + 1); }
+    return [...m].sort((a, b) => b[1] - a[1]);
+  };
+  return {
+    mode: 'hours', fromMs, toMs,
+    generatedAt: new Date().toISOString(),
+    usdIls: Number(env.USD_ILS) || 3.7,
+    revenueStatuses: REVENUE_STATUSES,
+    orders: orders.map((o) => ({ ...o, amount_usd: Number(o.amount_usd) || 0, fee_usd: o.fee_usd == null ? null : Number(o.fee_usd) })),
+    funnel,
+    adSpend,
+    visitTimes: visitRows.map((v) => ({ t: v.t, device: v.device })),
+    visitSources: count((v) => v.source).map(([source, visits]) => ({ source, visits })),
+    countries: count((v) => v.country || '??').slice(0, 8).map(([country, visits]) => ({ country, visits })),
+    cities: count((v) => v.city ? v.country + '|' + v.city : null).slice(0, 8).map(([k, visits]) => ({ country: k.split('|')[0], city: k.split('|')[1], visits })),
+    ...(await status(DB, env)),
   };
 }
 
@@ -449,7 +573,7 @@ function page(render, base, env, data = {}, status = 200) {
     ...baseHeaders('text/html; charset=utf-8'),
     'Content-Security-Policy': [
       "default-src 'none'", `script-src 'nonce-${nonce}'`, `style-src 'nonce-${nonce}' https://fonts.googleapis.com`, 'font-src https://fonts.gstatic.com',
-      "connect-src 'self'", "img-src data:", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'",
+      "connect-src 'self'", "img-src data: https://evoxelmusic.com", "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'",
     ].join('; '),
   };
   return new Response(render({ base, nonce, env, ...data }), { status, headers });

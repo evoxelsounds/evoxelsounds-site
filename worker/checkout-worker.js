@@ -48,13 +48,14 @@
      part of the site in view, where the visit came from (ad,
      Instagram, Google…) and phone or desktop. No cookies, no IP and
      no personal data are kept; the country is Cloudflare's 2 letters.
-   - One row per visit in live_sessions, updated in place; rows older
-     than an hour are deleted, so the table stays tiny.
+   - One row per visit in live_sessions, updated in place, with the time
+     it started; rows are kept for two days (the dashboard's "last 24
+     hours" view reads them) and then deleted, so the table stays small.
+     A tab that comes back after more than an hour is a new visit.
    - Each new visit also adds one to site_visits_daily (Israel date ×
      source × device) and to site_visits_geo (Israel date × country ×
-     city, both from Cloudflare), the dashboard's visitor history. A tab that comes
-     back within the hour is the same visit, so "left" only moves the row
-     out of the live window instead of deleting it.
+     city, both from Cloudflare), the dashboard's visitor history. "Left"
+     only moves the row out of the live window instead of deleting it.
 
    Settings (Cloudflare dashboard → this Worker → Settings):
      Variables and Secrets
@@ -145,7 +146,8 @@ export default {
 };
 
 /* ---------- live visitors ---------- */
-const LIVE_SOURCES = ['ad', 'instagram', 'facebook', 'google', 'other', 'direct'];
+// ad_reels / ad_stories / ad_feed: an ad whose link carried Meta's {{placement}}
+const LIVE_SOURCES = ['ad', 'ad_reels', 'ad_stories', 'ad_feed', 'instagram', 'facebook', 'google', 'other', 'direct'];
 const LIVE_DEVICES = ['mobile', 'desktop'];
 
 // keeps one anonymous row per open tab; a bad or odd signal is simply ignored
@@ -170,7 +172,17 @@ async function recordLive(text, request, env) {
   const created = await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country, city)
       VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (id) DO NOTHING`)
     .bind(m.id, t, place, source, device, country, city).run();
-  if (created.meta && created.meta.changes) {
+  let isNew = !!(created.meta && created.meta.changes);
+  if (!isNew) {
+    // the same tab back after more than an hour away is a new visit
+    const row = await DB.prepare('SELECT last_seen FROM live_sessions WHERE id = ?1').bind(m.id).first();
+    if (row && t - row.last_seen > 3600000) {
+      await DB.prepare(`UPDATE live_sessions SET first_seen = ?2, last_seen = ?2, place = ?3, source = ?4, device = ?5, country = ?6, city = ?7
+          WHERE id = ?1`).bind(m.id, t, place, source, device, country, city).run();
+      isNew = true;
+    }
+  }
+  if (isNew) {
     // a new visit: count it for today (Israel date), by source and device and by place
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(t));
     await DB.batch([
@@ -182,7 +194,8 @@ async function recordLive(text, request, env) {
   } else {
     await DB.prepare('UPDATE live_sessions SET last_seen = ?2, place = ?3 WHERE id = ?1').bind(m.id, t, place).run();
   }
-  if (Math.random() < 0.02) await DB.prepare('DELETE FROM live_sessions WHERE last_seen < ?1').bind(t - 3600000).run();
+  // kept for two days: the dashboard's "last 24 hours" view (and the 24 hours before it) reads them
+  if (Math.random() < 0.02) await DB.prepare('DELETE FROM live_sessions WHERE last_seen < ?1').bind(t - 49 * 3600000).run();
 }
 
 /* ---------- PayPal helpers ---------- */
