@@ -555,6 +555,11 @@ async function recent(url, env) {
   const funnel = await DB.prepare(`SELECT status, COUNT(*) AS n FROM orders
       WHERE kind = 'booking' AND created_at >= ? AND created_at < ? GROUP BY status`)
     .bind(fromIso, toIso).all().then((r) => r.results).catch(() => []);
+  // Meta has no placement breakdown by the hour, so the 24-hour view shows the placements of the
+  // calendar days it touches (today and yesterday), and the page says so
+  const placements = await DB.prepare(`SELECT platform, position, currency, SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks
+      FROM ad_spend_placement WHERE date >= ? AND date <= ? GROUP BY platform, position, currency ORDER BY spend DESC`)
+    .bind(jerHour(fromMs).slice(0, 10), jerHour(toMs).slice(0, 10)).all().then((r) => r.results).catch(() => []);
   const adSpend = (await DB.prepare(`SELECT hour, campaign, spend, currency, clicks FROM ad_spend_hourly
       WHERE hour >= ? AND hour <= ? ORDER BY hour`).bind(jerHour(fromMs), jerHour(toMs)).all()).results;
 
@@ -572,6 +577,7 @@ async function recent(url, env) {
     funnel,
     adSpend,
     visitTimes: visitRows.map((v) => ({ t: v.t, device: v.device })),
+    placements, placementsByDay: true,
     steps: [...stepCount].map(([step, visits]) => ({ step, visits })),
     exits: [...exitCount].sort((a, b) => b[1] - a[1]).map(([place, visits]) => ({ place, visits })),
     medianSeconds: (() => {

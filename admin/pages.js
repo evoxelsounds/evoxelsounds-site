@@ -362,7 +362,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
 
     <section class="live" id="live" aria-live="polite">
       <span class="tagline"><span class="dot"></span>LIVE</span>
-      <span class="n num" id="live-n">—</span><span class="k">עכשיו באתר</span>
+      <span class="n num" id="live-n">—</span><span class="k">עכשיו באתר · בזמן אמת</span>
       <span id="live-pills" class="contents"></span>
       <span class="empty" id="live-quiet" hidden>אין כרגע אף אחד באתר.</span>
     </section>
@@ -388,7 +388,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
         <p class="empty" id="geo-empty" hidden>עוד אין ביקורים בתקופה הזו. הספירה לפי מדינה ועיר התחילה ב־16.11.26.</p>
       </article>
       <article class="card" id="tasks-card">
-        <div class="head"><h2>לטיפול <span class="num accent" id="tasks-n"></span></h2><button class="linkbtn end" type="button" id="tasks-clear" hidden>נקה הכל</button></div>
+        <div class="head"><h2>לטיפול <span class="num accent" id="tasks-n"></span></h2><small>כל מה שפתוח, בלי קשר לטווח</small><button class="linkbtn end" type="button" id="tasks-clear" hidden>נקה הכל</button></div>
         <ul class="tasks" id="tasks"></ul>
         <p class="empty" id="tasks-empty" hidden>אין משימות פתוחות. הזמנה חדשה, החזר או תקלה עם מטא יופיעו כאן.</p>
         <div class="sync" id="sync"></div>
@@ -698,6 +698,8 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       box.appendChild(row);
     }
   }
+  // Meta gives placements per day only: in the 24-hour view they cover today and yesterday
+  const placementTitle = (t) => state.data && state.data.placementsByDay ? t + ' · היום ואתמול (מטא לא מפרקת לפי שעה)' : t;
   function placementRows() {
     const D = state.data, rate = state.rate || D.usdIls;
     return (D.placements || []).filter((r) => r.spend > 0 || r.clicks > 0).map((r) => {
@@ -709,8 +711,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     const box = $('#pop-extra'); box.replaceChildren(); box.hidden = true;
     const D = state.data;
     if (m.id === 'spend' && D.sources.adSpend.connected) {
-      box.hidden = false; box.appendChild(el('span', '', 'לפי מיקום המודעה'));
-      if (state.mode === 'hours') { box.appendChild(el('p', 'empty', 'הפירוט לפי מיקום זמין בטווחים של ימים.')); return; }
+      box.hidden = false; box.appendChild(el('span', '', placementTitle('לפי מיקום המודעה')));
       const rows = placementRows();
       if (rows.length) breakdownRows(box, rows); else box.appendChild(el('p', 'empty', 'אין הוצאה בתקופה הזו.'));
     } else if (m.id === 'visits') {
@@ -781,9 +782,9 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     $('#camp-empty').textContent = adsOn ? 'אין הוצאה על מודעות בתקופה הזו.' : 'מטא עוד לא מחובר.';
     $('#camp-n').textContent = live.length ? fmt.int(live.length) : '';
     const pBox = $('#placements'); pBox.replaceChildren();
-    const pRows = state.mode === 'hours' ? [] : placementRows();
+    const pRows = placementRows();
     pBox.hidden = !pRows.length;
-    if (pRows.length) { pBox.appendChild(el('span', '', 'לפי מיקום')); breakdownRows(pBox, pRows); }
+    if (pRows.length) { pBox.appendChild(el('span', '', placementTitle('לפי מיקום'))); breakdownRows(pBox, pRows); }
 
     // clients
     const tbody = $('#rows'); tbody.replaceChildren();
