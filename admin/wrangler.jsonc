@@ -17,6 +17,8 @@
   "triggers": { "crons": ["0 */3 * * *"] },
   "vars": {
     "USD_ILS": "3.7",
+    // "on": 5 wrong passwords lock sign-in for 15 minutes. "off" pauses that (temporary, while a new person signs in)
+    "DASH_LOCKOUT": "on",
     "META_API_VERSION": "v23.0",
     "META_AD_ACCOUNT": "606837333350044",
     "META_CAMPAIGN_FILTER": "Site"

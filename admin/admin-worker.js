@@ -255,7 +255,9 @@ async function login(request, env, base) {
     const row = await DB.prepare(`SELECT
         SUM(CASE WHEN ip = ?1 THEN 1 ELSE 0 END) AS mine, COUNT(*) AS total
         FROM admin_login_attempts WHERE at > ?2`).bind(ip, since).first();
-    if ((row && row.mine >= LOCK.perIp) || (row && row.total >= LOCK.total)) {
+    // DASH_LOCKOUT = "off" (wrangler.jsonc) pauses the lock; wrong attempts are still recorded
+    const lockOn = env.DASH_LOCKOUT !== 'off';
+    if (lockOn && ((row && row.mine >= LOCK.perIp) || (row && row.total >= LOCK.total))) {
       return page(loginPage, base, env, { error: 'locked' }, 429);
     }
   }
