@@ -3,7 +3,10 @@
 //
 //   node setup.mjs             first time: makes a new secret link, asks for a password,
 //                              uploads everything and prints the link
-//   node setup.mjs password    changes only the password (signs everyone out)
+//   node setup.mjs password    changes your own password (signs you out everywhere)
+//   node setup.mjs password aki   sets a separate password for another person (here "aki");
+//                              run it again to change theirs. To remove them:
+//                              npx wrangler secret delete DASH_PASSWORD_HASH_AKI
 //   node setup.mjs link        makes a new secret link (the old one stops working)
 //   node setup.mjs --local     same, but writes .dev.vars for `npx wrangler dev` instead of uploading
 //
@@ -21,7 +24,11 @@ const MIN_LENGTH = 10;
 
 const args = process.argv.slice(2);
 const local = args.includes('--local');
-const mode = args.find((a) => !a.startsWith('--')) || 'all';
+const plain = args.filter((a) => !a.startsWith('--'));
+const mode = plain[0] || 'all';
+// "password aki": another person's password, stored as DASH_PASSWORD_HASH_AKI
+const person = mode === 'password' && plain[1] ? plain[1].toLowerCase() : null;
+if (person && (!/^[a-z0-9]{1,20}$/.test(person) || person === 'oz')) { console.error('The name can use English letters and digits only (up to 20), and can\'t be "oz".'); process.exit(1); }
 
 const b64u = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -94,8 +101,11 @@ if (mode === 'all' || mode === 'link') {
   values.DASH_PATH = randomCode(CODE_LENGTH);        // 10 characters from 57, about 58 random bits
   values.DASH_SESSION_KEY = b64u(randomBytes(32));
 }
-if (mode === 'all' || mode === 'password') values.DASH_PASSWORD_HASH = await passwordHash();
-if (!Object.keys(values).length) { console.error('Unknown option. Use: node setup.mjs [password|link] [--local]'); process.exit(1); }
+if (person) {
+  console.log(`Setting the password for "${person}". Let them type it themselves.`);
+  values['DASH_PASSWORD_HASH_' + person.toUpperCase()] = await passwordHash();
+} else if (mode === 'all' || mode === 'password') values.DASH_PASSWORD_HASH = await passwordHash();
+if (!Object.keys(values).length) { console.error('Unknown option. Use: node setup.mjs [password [name]|link] [--local]'); process.exit(1); }
 
 if (local) writeDevVars(values);
 for (const [k, v] of Object.entries(values)) upload(k, v);
@@ -104,6 +114,8 @@ if (values.DASH_PATH) {
   const base = local ? 'http://localhost:8787' : WORKER_URL;
   console.log('\nYour private dashboard link (keep it to yourself, it is not shown again):');
   console.log(`  ${base}/${values.DASH_PATH}/\n`);
+} else if (person) {
+  console.log(`\nPassword for "${person}" saved. They sign in with the same link; anyone else stays signed in.`);
 } else {
-  console.log('\nPassword changed. Everyone signed in has been signed out.');
+  console.log('\nPassword changed. You have been signed out everywhere; others stay signed in.');
 }

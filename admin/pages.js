@@ -89,7 +89,7 @@ button{padding:12px;border-radius:100px;border:0;background:var(--accent);color:
 }
 
 /* ---------- dashboard page ---------- */
-export function dashboardPage({ base, nonce }) {
+export function dashboardPage({ base, nonce, user }) {
   const navLink = (href, ic, label, extra = '') => `<a href="#${href}" class="nav-a" data-nav="${href}">${icon(ic)}<span>${label}</span>${extra}</a>`;
   return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
@@ -107,6 +107,7 @@ export function dashboardPage({ base, nonce }) {
 .nav-a.on{background:var(--surface-2);color:var(--text);font-weight:600}
 .nav-a .tag{margin-inline-start:auto;font-size:12px;color:var(--good)}
 .side .foot{margin-top:auto;display:flex;flex-direction:column;gap:2px}
+.side .who{padding:8px 10px 0;font-size:12px;color:var(--mute)}
 .side .foot .nav-a,.side .foot button{font-size:13px;color:var(--mute)}
 .side form button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:9px;background:none;cursor:pointer;text-align:right}
 .side form button:hover{color:var(--text);background:rgba(27,22,34,.6)}
@@ -308,6 +309,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     <div class="foot">
       ${navLink('how', 'info', 'איך מחושב')}
       <form method="post" action="${esc(base)}/logout"><button type="submit">${icon('logout')}<span>יציאה</span></button></form>
+      ${user ? `<span class="who">מחובר: ${esc(user.charAt(0).toUpperCase() + user.slice(1))}</span>` : ''}
     </div>
   </nav>
 

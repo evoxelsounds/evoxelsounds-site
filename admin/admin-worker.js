@@ -9,7 +9,8 @@
      the same one a random URL gets, so nothing hints that a page
      exists. The repo is public, so the secret is never in the code.
    - Behind the link there is a password. It is stored only as a
-     PBKDF2 hash (DASH_PASSWORD_HASH).
+     PBKDF2 hash (DASH_PASSWORD_HASH). More people get their own
+     password as DASH_PASSWORD_HASH_<NAME> (node setup.mjs password <name>).
    - A correct password gives a signed cookie for 12 hours
      (HttpOnly, Secure, SameSite=Strict). Changing the password signs
      everyone out, because the cookie's key includes the hash.
@@ -95,7 +96,7 @@ export default {
       }
       if ((rest === '' || rest === '/') && request.method === 'GET') {
         if (rest === '') return redirect(base + '/');
-        return signedIn ? page(dashboardPage, base, env) : page(loginPage, base, env, {});
+        return signedIn ? page(dashboardPage, base, env, { user: signedIn }) : page(loginPage, base, env, {});
       }
       return notFound();
     } catch (err) {
@@ -261,9 +262,11 @@ async function login(request, env, base) {
 
   const form = await request.formData().catch(() => null);
   const password = String((form && form.get('password')) || '').slice(0, 200);
-  const ok = password.length > 0 && env.DASH_PASSWORD_HASH && await verifyPassword(password, env.DASH_PASSWORD_HASH);
+  // every person's password is checked, so the time taken doesn't reveal which one was close
+  let who = null;
+  if (password.length > 0) for (const u of users(env)) if (await verifyPassword(password, u.hash) && !who) who = u;
 
-  if (!ok) {
+  if (!who) {
     if (DB) {
       await DB.batch([
         DB.prepare('INSERT INTO admin_login_attempts (ip, at) VALUES (?1, ?2)').bind(ip, Date.now()),
@@ -274,20 +277,35 @@ async function login(request, env, base) {
   }
 
   if (DB) await DB.prepare('DELETE FROM admin_login_attempts WHERE ip = ?1').bind(ip).run();
-  return redirect(base + '/', await sessionCookie(env));
+  return redirect(base + '/', await sessionCookie(env, who));
 }
 
-/* ---------- session cookie ---------- */
-async function sessionKey(env) {
-  if (!env.DASH_SESSION_KEY || !env.DASH_PASSWORD_HASH) throw new Error('Dashboard secrets are not set');
-  return crypto.subtle.importKey('raw', enc.encode(env.DASH_SESSION_KEY + '|' + env.DASH_PASSWORD_HASH),
+/* ---------- people who can sign in ----------
+   DASH_PASSWORD_HASH is the owner's password; DASH_PASSWORD_HASH_<NAME> adds a person
+   (node setup.mjs password aki → DASH_PASSWORD_HASH_AKI). Deleting that secret removes them. */
+function users(env) {
+  const list = [];
+  if (env.DASH_PASSWORD_HASH) list.push({ name: 'oz', hash: env.DASH_PASSWORD_HASH });
+  for (const k of Object.keys(env)) {
+    const m = k.match(/^DASH_PASSWORD_HASH_([A-Z0-9]{1,20})$/);
+    if (m && env[k]) list.push({ name: m[1].toLowerCase(), hash: env[k] });
+  }
+  return list;
+}
+
+/* ---------- session cookie ----------
+   The cookie names the person and is signed with a key that includes that person's password
+   hash, so changing one person's password signs out only that person. */
+async function sessionKey(env, user) {
+  if (!env.DASH_SESSION_KEY || !user || !user.hash) throw new Error('Dashboard secrets are not set');
+  return crypto.subtle.importKey('raw', enc.encode(env.DASH_SESSION_KEY + '|' + user.hash),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-async function sessionCookie(env) {
+async function sessionCookie(env, user) {
   const exp = Date.now() + SESSION_HOURS * 3600000;
-  const payload = b64u(enc.encode(JSON.stringify({ exp, n: b64u(crypto.getRandomValues(new Uint8Array(12))) })));
-  const sig = b64u(await crypto.subtle.sign('HMAC', await sessionKey(env), enc.encode(payload)));
+  const payload = b64u(enc.encode(JSON.stringify({ exp, u: user.name, n: b64u(crypto.getRandomValues(new Uint8Array(12))) })));
+  const sig = b64u(await crypto.subtle.sign('HMAC', await sessionKey(env, user), enc.encode(payload)));
   return `${COOKIE}=${payload}.${sig}; Path=/; Max-Age=${SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Strict`;
 }
 
@@ -300,10 +318,13 @@ async function readSession(request, env) {
   const m = cookies.match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([A-Za-z0-9_-]+)\\.([A-Za-z0-9_-]+)'));
   if (!m) return false;
   try {
-    const valid = await crypto.subtle.verify('HMAC', await sessionKey(env), b64uDecode(m[2]), enc.encode(m[1]));
-    if (!valid) return false;
-    const { exp } = JSON.parse(new TextDecoder().decode(b64uDecode(m[1])));
-    return typeof exp === 'number' && exp > Date.now();
+    // the payload says who it is for; the signature with that person's key decides whether to believe it
+    const { exp, u } = JSON.parse(new TextDecoder().decode(b64uDecode(m[1])));
+    const user = users(env).find((x) => x.name === (u || 'oz'));
+    if (!user) return false;
+    const valid = await crypto.subtle.verify('HMAC', await sessionKey(env, user), b64uDecode(m[2]), enc.encode(m[1]));
+    if (!valid || typeof exp !== 'number' || exp <= Date.now()) return false;
+    return user.name;
   } catch {
     return false;
   }
