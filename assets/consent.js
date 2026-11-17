@@ -83,6 +83,8 @@
   // an interest signal sent at most once per page visit (per name + key)
   var sentOnce = {};
   window.evxSignal = function(name, params, key){
+    // tells the anonymous visit counter (live.js) about the step; nothing about it reaches Meta
+    try { window.dispatchEvent(new CustomEvent('evx:step', { detail: name })); } catch (e) {}
     var k = name + ':' + (key || '');
     if (!pixelOn || sentOnce[k]) return;
     sentOnce[k] = true;

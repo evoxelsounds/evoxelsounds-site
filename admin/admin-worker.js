@@ -447,6 +447,12 @@ async function summary(url, env) {
       WHERE date >= ? AND date <= ? GROUP BY source ORDER BY visits DESC`)
     .bind(from, to).all().then((r) => r.results).catch(() => []);
 
+  // the path: how many visits reached each step, and where visits left (counted by the checkout Worker)
+  const steps = await DB.prepare(`SELECT step, SUM(visits) AS visits FROM site_steps_daily
+      WHERE date >= ? AND date <= ? GROUP BY step`).bind(from, to).all().then((r) => r.results).catch(() => []);
+  const exits = await DB.prepare(`SELECT place, SUM(visits) AS visits FROM site_exits_daily
+      WHERE date >= ? AND date <= ? GROUP BY place HAVING SUM(visits) > 0 ORDER BY visits DESC`).bind(from, to).all().then((r) => r.results).catch(() => []);
+
   // where the ads ran, from Meta (spend and clicks per placement)
   const placements = await DB.prepare(`SELECT platform, position, currency, SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks
       FROM ad_spend_placement WHERE date >= ? AND date <= ? GROUP BY platform, position, currency ORDER BY spend DESC`)
@@ -471,6 +477,8 @@ async function summary(url, env) {
     visits,
     visitSources,
     placements,
+    steps,
+    exits,
     countries,
     cities,
     ...(await status(DB, env)),
@@ -507,8 +515,17 @@ async function recent(url, env) {
   const fromIso = new Date(fromMs).toISOString(), toIso = new Date(toMs).toISOString();
 
   // each visit of the window (anonymous rows the checkout Worker keeps for two days)
-  const visitRows = await DB.prepare(`SELECT first_seen AS t, source, device, country, city FROM live_sessions
-      WHERE first_seen >= ?1 AND first_seen < ?2`).bind(fromMs, toMs).all().then((r) => r.results).catch(() => []);
+  const visitRows = await DB.prepare(`SELECT first_seen AS t, last_seen, source, device, country, city, steps, place, exit_place FROM live_sessions
+      WHERE first_seen >= ?1 AND first_seen < ?2`).bind(fromMs, toMs).all()
+    .then((r) => r.results).catch(() => DB.prepare(`SELECT first_seen AS t, source, device, country, city FROM live_sessions
+      WHERE first_seen >= ?1 AND first_seen < ?2`).bind(fromMs, toMs).all().then((r) => r.results).catch(() => []));
+  // steps reached, and where visits that have ended left (the place they were last seen, if no exit was sent)
+  const stepCount = new Map(), exitCount = new Map();
+  const liveCut = Date.now() - 90000;
+  for (const v of visitRows) {
+    for (const c of String(v.steps || '').split(',').filter(Boolean)) stepCount.set(c, (stepCount.get(c) || 0) + 1);
+    if ((v.last_seen || 0) < liveCut) { const pl = v.exit_place || v.place || 'home'; exitCount.set(pl, (exitCount.get(pl) || 0) + 1); }
+  }
   const orders = await DB.prepare(`SELECT ref, paid_at, artist, track, service, options, amount_paid AS amount_usd,
       paypal_fee AS fee_usd, status FROM orders WHERE status IN (${SHOWN_STATUSES.map(() => '?').join(',')}) AND paid_at >= ? AND paid_at < ?
       ORDER BY paid_at DESC`).bind(...SHOWN_STATUSES, fromIso, toIso).all().then((r) => r.results).catch(() => []);
@@ -532,6 +549,12 @@ async function recent(url, env) {
     funnel,
     adSpend,
     visitTimes: visitRows.map((v) => ({ t: v.t, device: v.device })),
+    steps: [...stepCount].map(([step, visits]) => ({ step, visits })),
+    exits: [...exitCount].sort((a, b) => b[1] - a[1]).map(([place, visits]) => ({ place, visits })),
+    medianSeconds: (() => {
+      const d = visitRows.filter((v) => v.last_seen && v.last_seen < liveCut).map((v) => Math.max(0, (v.last_seen + 120000 * (v.exit_place ? 1 : 0) - v.t) / 1000)).sort((a, b) => a - b);
+      return d.length ? Math.round(d[Math.floor(d.length / 2)]) : null;
+    })(),
     visitSources: count((v) => v.source).map(([source, visits]) => ({ source, visits })),
     countries: count((v) => v.country || '??').slice(0, 8).map(([country, visits]) => ({ country, visits })),
     cities: count((v) => v.city ? v.country + '|' + v.city : null).slice(0, 8).map(([k, visits]) => ({ country: k.split('|')[0], city: k.split('|')[1], visits })),

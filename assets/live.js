@@ -71,15 +71,62 @@
       for (var n = 1; n <= 4; n++) { var p = document.getElementById('ck' + n); if (p && !p.hidden) return 'book:' + n; }
       return 'book';
     }
-    var el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
-    var sec = el && el.closest ? el.closest('section[id], footer') : null;
-    return sec ? (sec.id || 'footer').toLowerCase().slice(0, 40) : 'home';
+    // the section that spans the middle of the screen, by position (overlays and fixed layers can't hide it)
+    var mid = (window.innerHeight || document.documentElement.clientHeight || 0) / 2;
+    var secs = document.querySelectorAll('section[id], footer');
+    for (var i = 0; i < secs.length; i++) {
+      var r = secs[i].getBoundingClientRect();
+      if (r.top <= mid && r.bottom > mid) return (secs[i].id || 'footer').toLowerCase().slice(0, 40);
+    }
+    return 'home';
   }
 
   var dev = device(), lastActive = Date.now(), lastSent = 0, lastPlace = '', timer = null;
 
+  /* ---------- the visit's path ----------
+     Short codes for the steps a visit reached, so the dashboard can show where people drop off:
+       s:<section>   the section was on screen (services, credits, work, about, contact, faq)
+       d25 d50 d75 d90  scrolled that far down the page
+       h             opened the booking page; b2 b3 b4  reached step 2 (track), 3 (pay), 4 (done)
+       ba ab dl      played the before/after player, switched Before/After while playing, listened 30 s or 3 tracks
+       pr en         pricing on screen, 60 s on the page and scrolled half of it
+       ad fs pc      ticked an extra, started typing details, closed PayPal without paying
+       ct            clicked a contact link (email, WhatsApp, Instagram)
+     Everything stays in this tab until it is sent with the anonymous visit signal. */
+  var steps = {}, stepsSent = '';
+  var STEP_OF = { PlayBeforeAfter: 'ba', CompareAB: 'ab', DeepListen: 'dl', ViewPricing: 'pr', Engaged60s: 'en', SelectAddon: 'ad', FormStart: 'fs', PaymentCancel: 'pc' };
+  function reach(code) { if (!steps[code]) { steps[code] = 1; lastSent = 0; } }
+  function stepList() { return Object.keys(steps).sort().join(','); }
+  addEventListener('evx:step', function (e) { if (STEP_OF[e.detail]) reach(STEP_OF[e.detail]); });
+  if ('IntersectionObserver' in window) {
+    var seen = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { reach('s:' + e.target.id); seen.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -35% 0px' });
+    ['services', 'credits', 'work', 'about', 'contact', 'faq'].forEach(function (id) { var el = document.getElementById(id); if (el) seen.observe(el); });
+  }
+  function depth() {
+    var max = document.documentElement.scrollHeight - innerHeight;
+    if (max <= 0) return;
+    var f = scrollY / max;
+    [25, 50, 75, 90].forEach(function (d) { if (f >= d / 100) reach('d' + d); });
+  }
+  function bookingStep(p) {
+    if (p.indexOf('book') === 0) reach('h');
+    var n = +p.split(':')[1];
+    if (n >= 2) reach('b2');
+    if (n >= 3) reach('b3');
+    if (n >= 4) reach('b4');
+  }
+  var depthQueued = false;   // the deepest point reached, checked at most once a frame while scrolling
+  addEventListener('scroll', function () { if (!depthQueued) { depthQueued = true; requestAnimationFrame(function () { depthQueued = false; depth(); }); } }, { passive: true });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (a && /^(mailto:|tel:)|wa\.me|whatsapp|instagram\.com/i.test(a.getAttribute('href'))) reach('ct');
+  }, { passive: true, capture: true });
+
   function send(type) {
-    var body = JSON.stringify({ t: type, id: visit.id, p: lastPlace, s: visit.s, d: dev });
+    var body = JSON.stringify({ t: type, id: visit.id, p: lastPlace, s: visit.s, d: dev, st: stepList() });
+    stepsSent = stepList();
     try {
       if (type === 'leave' && navigator.sendBeacon) return navigator.sendBeacon(api + '/live', new Blob([body], { type: 'text/plain' }));
       fetch(api + '/live', { method: 'POST', body: body, headers: { 'Content-Type': 'text/plain' }, keepalive: true, credentials: 'omit', mode: 'cors' }).catch(function () {});
@@ -90,7 +137,8 @@
     if (document.visibilityState !== 'visible') return;
     if (Date.now() - lastActive > IDLE) { stop(); return; }
     var now = place();
-    if (now !== lastPlace || Date.now() - lastSent >= BEAT) { lastPlace = now; lastSent = Date.now(); send('ping'); }
+    depth(); bookingStep(now);
+    if (now !== lastPlace || stepList() !== stepsSent || Date.now() - lastSent >= BEAT) { lastPlace = now; lastSent = Date.now(); send('ping'); }
   }
   function start() { if (!timer) { timer = setInterval(tick, CHECK); tick(); } }
   function stop() { if (timer) { clearInterval(timer); timer = null; } }
@@ -100,7 +148,7 @@
 
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') { lastSent = 0; active(); }
-    else { stop(); send('leave'); lastSent = 0; }
+    else { stop(); lastPlace = place(); depth(); bookingStep(lastPlace); send('leave'); lastSent = 0; }
   });
   addEventListener('pagehide', function () { send('leave'); });
 

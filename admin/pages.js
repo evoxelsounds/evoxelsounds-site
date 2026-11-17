@@ -21,6 +21,7 @@ const ICON = {
   megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   funnel: '<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
+  route: '<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>',
   live: '<circle cx="12" cy="12" r="2.5"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
@@ -253,6 +254,18 @@ export function dashboardPage({ base, nonce }) {
 .frow .bar i{display:block;height:100%;border-radius:100px;background:var(--accent)}
 .frow b{font-family:var(--display);font-weight:700}
 .frow small{font-size:12px;color:var(--mute);font-weight:400}
+.jgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:30px}
+@media (max-width:860px){.jgrid{grid-template-columns:1fr}}
+.jstep{display:grid;grid-template-columns:minmax(0,1fr) minmax(70px,1.3fr) 70px;gap:12px;align-items:center;font-size:13px}
+.jstep>span:first-child{color:var(--dim)}
+.jstep.jmain>span:first-child{color:var(--text)}
+.jstep .bar{height:8px;border-radius:100px;background:var(--surface-2);overflow:hidden}
+.jstep .bar i{display:block;height:100%;border-radius:100px;background:var(--accent)}
+.jstep.jside .bar i{background:var(--prev)}
+.jstep b{font-family:var(--display);font-weight:600;text-align:left;white-space:nowrap}
+.jstep small{color:var(--mute);font-weight:400;font-size:11px;margin-inline-start:5px}
+.jdrop{font-size:11px;color:var(--bad);padding-inline-start:4px;margin:-4px 0 2px}
+.insight{margin:0}
 .note{font-size:12px;color:var(--mute);padding-top:8px;border-top:1px solid rgba(230,180,120,.08)}
 
 /* tables */
@@ -290,7 +303,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     <a class="brand" href="https://evoxelmusic.com/" target="_blank" rel="noopener"><img src="${LOGO}" alt="EVOXEL SOUNDS" width="150" height="34"></a>
     <div class="grp">${navLink('overview', 'home', 'סקירה')}</div>
     <div class="grp"><span>כסף</span>${navLink('metrics', 'profit', 'רווח והכנסות')}${navLink('campaigns', 'megaphone', 'קמפיינים')}</div>
-    <div class="grp"><span>קהל</span>${navLink('geo', 'globe', 'מאיפה המבקרים')}${navLink('funnel', 'funnel', 'משפך')}${navLink('live', 'live', 'עכשיו באתר', '<span class="tag num" id="nav-live"></span>')}</div>
+    <div class="grp"><span>קהל</span>${navLink('journey', 'route', 'מסלול באתר')}${navLink('geo', 'globe', 'מאיפה המבקרים')}${navLink('funnel', 'funnel', 'משפך')}${navLink('live', 'live', 'עכשיו באתר', '<span class="tag num" id="nav-live"></span>')}</div>
     <div class="grp"><span>לקוחות</span>${navLink('orders', 'users', 'הזמנות ולקוחות')}</div>
     <div class="foot">
       ${navLink('how', 'info', 'איך מחושב')}
@@ -352,6 +365,16 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       <span class="empty" id="live-quiet" hidden>אין כרגע אף אחד באתר.</span>
     </section>
 
+    <section class="card" id="journey">
+      <div class="head"><h2>מסלול באתר</h2><small>עד איפה המבקרים הגיעו, ומאיפה יצאו</small><span class="end sync" id="journey-note"></span></div>
+      <p class="lede insight" id="journey-insight"></p>
+      <div class="jgrid">
+        <div class="col"><span>עד איפה הגיעו</span><div id="journey-steps" class="col"></div></div>
+        <div class="col"><span>איפה יצאו</span><div id="journey-exits" class="col"></div><p class="empty" id="exits-empty" hidden>עוד אין יציאות בתקופה הזו.</p></div>
+      </div>
+      <p class="empty" id="journey-empty" hidden>מעקב המסלול התחיל ב־17.11.26. ביקורים מאז יופיעו כאן.</p>
+    </section>
+
     <section class="grid3">
       <article class="card span2" id="geo">
         <div class="head"><h2>מאיפה המבקרים</h2><small id="geo-total"></small></div>
@@ -405,6 +428,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       <li>ביקורים: האתר סופר אותם בעצמו, ביקור לכל לשונית פתוחה (חזרה תוך שעה היא אותו ביקור), לפי תאריך בישראל. מדינה ועיר לפי Cloudflare, בלי לשמור כתובת IP. נספרים גם מי שלא אישרו עוגיות.</li>
       <li>השוואה: מול תקופה באותו אורך שקדמה לה. המרה: הזמנות ששולמו חלקי ביקורים.</li>
       <li>מיקום המודעה (רילס, סטורי, פיד): ההוצאה והקליקים לפי מיקום באים ממטא. ביקור נספר כ"מודעה · רילס" או "מודעה · סטורי" כשהקישור במודעה כולל את התג {{placement}} של מטא.</li>
+      <li>מסלול באתר: כל ביקור שולח בעילום שם אילו שלבים הוא עבר (אילו חלקים באתר ראה, כמה גלל, האם ניגן בנגן הלפני/אחרי, ועד איזה שלב בהזמנה הגיע). כל שלב נספר פעם אחת לביקור. "איפה יצאו" הוא המקום שבו הביקור היה כשהלשונית נסגרה או הוסתרה. המעקב התחיל ב־17.11.26.</li>
       <li>לטיפול: רק דברים שיש מה לעשות איתם: הזמנה חדשה לביצוע, תשלום שממתין, החזר, או תקלה עם מטא. מי שהתחיל הזמנה ולא סיים מופיע במשפך, לא כמשימה.</li>
     </ul></details>
   </main>
@@ -742,6 +766,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     $('#geo-empty').hidden = totalGeo > 0;
     $('.geo').hidden = !totalGeo;
 
+    renderJourney(t);
     renderTasks();
 
     // campaigns
@@ -773,6 +798,75 @@ body.loading [data-k],body.loading .strip{opacity:.45}
     $('#rows-empty').hidden = D.orders.length > 0;
     $('#orders-n').textContent = D.orders.length ? fmt.int(D.orders.length) + ' בתקופה' : '';
     showSync(D.sources);
+  }
+
+  // the path: how far visits got (in the order of the page and the booking), and where they left
+  const PATH = [
+    ['visits', 'נכנסו לאתר', true],
+    ['d25', 'גללו רבע עמוד', true],
+    ['s:services', 'ראו את השירותים והמחירים', true],
+    ['ba', 'ניגנו בנגן הלפני/אחרי', true],
+    ['ab', 'החליפו בין לפני לאחרי', false],
+    ['dl', 'האזינו לעומק (30 שניות או 3 טרקים)', false],
+    ['d50', 'גללו חצי עמוד', false],
+    ['s:credits', 'הגיעו לקרדיטים', false],
+    ['s:work', 'הגיעו לפורטפוליו', false],
+    ['s:about', 'הגיעו לאודות', false],
+    ['s:faq', 'הגיעו לשאלות', false],
+    ['d90', 'גללו עד הסוף', false],
+    ['en', 'שהו דקה וגללו חצי', false],
+    ['ct', 'לחצו על יצירת קשר', false],
+    ['h', 'פתחו את עמוד ההזמנה', true],
+    ['b2', 'הגיעו לפרטי הטרק', true],
+    ['fs', 'התחילו למלא פרטים', false],
+    ['b3', 'הגיעו לתשלום', true],
+    ['pc', 'פתחו PayPal וסגרו בלי לשלם', false],
+    ['orders', 'שילמו', true],
+  ];
+  function renderJourney(t) {
+    const D = state.data;
+    const n = Object.fromEntries((D.steps || []).map((r) => [r.step, r.visits]));
+    n.visits = t.visits; n.orders = t.orders;
+    const tracked = (D.steps || []).length > 0;
+    const box = $('#journey-steps'); box.replaceChildren();
+    $('#journey-empty').hidden = tracked || t.visits > 0;
+    const base = Math.max(t.visits, 1);
+    let prevMain = null, worst = null;
+    for (const [key, label, main] of PATH) {
+      const v = n[key] || 0;
+      if (!main && !v) continue;
+      if (main && prevMain && prevMain.v > 0) {
+        const lost = prevMain.v - v;
+        if (lost > 0 && (!worst || lost > worst.lost)) worst = { lost, from: prevMain.label, to: label, share: lost / prevMain.v };
+      }
+      const row = el('div', 'jstep ' + (main ? 'jmain' : 'jside'));
+      row.appendChild(el('span', '', label));
+      const bar = el('span', 'bar'); const fill = el('i'); fill.style.width = Math.min(100, v / base * 100) + '%'; bar.appendChild(fill); row.appendChild(bar);
+      const b = el('b', 'num', fmt.int(v)); if (key !== 'visits') b.appendChild(el('small', '', Math.round(v / base * 100) + '%')); row.appendChild(b);
+      box.appendChild(row);
+      if (main) prevMain = { v, label };
+    }
+    const exits = D.exits || [];
+    const totalExits = exits.reduce((a, r) => a + r.visits, 0);
+    const eBox = $('#journey-exits'); eBox.replaceChildren();
+    for (const r of exits.slice(0, 8)) {
+      const row = el('div', 'jstep jside');
+      row.appendChild(el('span', '', PLACE[r.place] || r.place));
+      const bar = el('span', 'bar'); const fill = el('i'); fill.style.width = (r.visits / totalExits * 100) + '%'; bar.appendChild(fill); row.appendChild(bar);
+      const b = el('b', 'num', fmt.int(r.visits)); b.appendChild(el('small', '', Math.round(r.visits / totalExits * 100) + '%')); row.appendChild(b);
+      eBox.appendChild(row);
+    }
+    $('#exits-empty').hidden = exits.length > 0;
+    // one sentence on what stands out
+    const parts = [];
+    if (t.visits && tracked) {
+      const shallow = t.visits - (n.d25 || 0);
+      if (shallow > 0) parts.push(Math.round(shallow / t.visits * 100) + '% יצאו בלי לגלול אפילו רבע עמוד');
+      if (worst) parts.push('הנשירה הגדולה: ' + Math.round(worst.share * 100) + '% עזבו בין "' + worst.from + '" ל"' + worst.to + '"');
+      if (!(n.h || 0)) parts.push('אף אחד עוד לא פתח את עמוד ההזמנה');
+    }
+    $('#journey-insight').textContent = parts.join(' · ');
+    $('#journey-note').textContent = D.medianSeconds != null ? 'זמן חציוני באתר: ' + (D.medianSeconds >= 60 ? Math.floor(D.medianSeconds / 60) + ' דק׳ ' : '') + (D.medianSeconds % 60) + ' שנ׳' : '';
   }
 
   // tasks: each can be marked done; "clear all" marks every open one
@@ -935,6 +1029,7 @@ body.loading [data-k],body.loading .strip{opacity:.45}
       ['תצוגה', 'גרפים לפי יום', () => setGrain('day')],
       ['תצוגה', 'גרפים לפי שבוע', () => setGrain('week')],
       ['תצוגה', 'גרפים לפי חודש', () => setGrain('month')],
+      ['מעבר', 'מסלול באתר', () => go('journey')],
       ['מעבר', 'מאיפה המבקרים', () => go('geo')],
       ['מעבר', 'לטיפול', () => go('tasks-card')],
       ['מעבר', 'משפך', () => go('funnel')],

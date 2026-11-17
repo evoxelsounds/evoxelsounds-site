@@ -56,6 +56,11 @@
      source × device) and to site_visits_geo (Israel date × country ×
      city, both from Cloudflare), the dashboard's visitor history. "Left"
      only moves the row out of the live window instead of deleting it.
+   - The path: each visit also sends the steps it reached (sections seen,
+     how far it scrolled, the before/after player, the booking steps…).
+     Each step counts once per visit in site_steps_daily, and the place a
+     visit left from counts in site_exits_daily, so the dashboard can show
+     where people drop off.
 
    Settings (Cloudflare dashboard → this Worker → Settings):
      Variables and Secrets
@@ -151,48 +156,72 @@ const LIVE_SOURCES = ['ad', 'ad_reels', 'ad_stories', 'ad_feed', 'instagram', 'f
 const LIVE_DEVICES = ['mobile', 'desktop'];
 
 // keeps one anonymous row per open tab; a bad or odd signal is simply ignored
+// the steps a visit can reach (see assets/live.js); anything else is ignored
+const STEP_CODES = new Set(['s:services', 's:credits', 's:work', 's:about', 's:contact', 's:faq', 'd25', 'd50', 'd75', 'd90',
+  'h', 'b2', 'b3', 'b4', 'ba', 'ab', 'dl', 'pr', 'en', 'ad', 'fs', 'pc', 'ct']);
+const parseSteps = (v) => [...new Set(String(v || '').split(',').filter((c) => STEP_CODES.has(c)))];
+const jerDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(ms));
+
+// keeps one anonymous row per open tab, with the path it took; a bad or odd signal is simply ignored
 async function recordLive(text, request, env) {
   let m;
-  try { m = JSON.parse(String(text).slice(0, 500)); } catch { return; }
+  try { m = JSON.parse(String(text).slice(0, 800)); } catch { return; }
   if (!m || !/^[A-Za-z0-9]{16,32}$/.test(m.id || '')) return;
   const DB = await database(env);
   if (!DB) return;
-  if (m.t === 'leave') {
-    // out of the live count at once, but kept for an hour so a returning tab is the same visit
-    await DB.prepare('UPDATE live_sessions SET last_seen = last_seen - 120000 WHERE id = ?1').bind(m.id).run();
-    return;
-  }
   const t = Date.now();
   const place = /^[a-z0-9:_-]{1,40}$/.test(m.p || '') ? m.p : null;
+  const incoming = parseSteps(m.st);
+  const row = await DB.prepare('SELECT first_seen, last_seen, steps, exit_place FROM live_sessions WHERE id = ?1').bind(m.id).first();
+
+  // statements that count a step once per visit, by the day the visit started
+  const countSteps = (day, codes) => codes.map((c) => DB.prepare(`INSERT INTO site_steps_daily (date, step, visits) VALUES (?1, ?2, 1)
+      ON CONFLICT (date, step) DO UPDATE SET visits = visits + 1`).bind(day, c));
+
+  if (m.t === 'leave') {
+    // out of the live count at once, but kept so a returning tab is the same visit. Where it left is
+    // counted as its exit; if it comes back and leaves somewhere else, the exit moves there.
+    if (!row) return;
+    const day = jerDay(row.first_seen);
+    const had = parseSteps(row.steps), added = incoming.filter((c) => !had.includes(c));
+    const stmts = [DB.prepare(`UPDATE live_sessions SET last_seen = last_seen - 120000, steps = ?2, place = COALESCE(?3, place), exit_place = COALESCE(?3, exit_place)
+        WHERE id = ?1`).bind(m.id, [...had, ...added].join(','), place), ...countSteps(day, added)];
+    if (place && row.exit_place !== place) {
+      if (row.exit_place) stmts.push(DB.prepare('UPDATE site_exits_daily SET visits = visits - 1 WHERE date = ?1 AND place = ?2').bind(day, row.exit_place));
+      stmts.push(DB.prepare(`INSERT INTO site_exits_daily (date, place, visits) VALUES (?1, ?2, 1)
+          ON CONFLICT (date, place) DO UPDATE SET visits = visits + 1`).bind(day, place));
+    }
+    await DB.batch(stmts);
+    return;
+  }
+
   const source = LIVE_SOURCES.includes(m.s) ? m.s : 'other';
   const device = LIVE_DEVICES.includes(m.d) ? m.d : null;
   const cc = (request.cf && request.cf.country) || request.headers.get('CF-IPCountry') || '';
   const country = /^[A-Z]{2}$/.test(cc) ? cc : null;
   const city = request.cf && request.cf.city ? String(request.cf.city).slice(0, 60) : null;
-  const created = await DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country, city)
-      VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (id) DO NOTHING`)
-    .bind(m.id, t, place, source, device, country, city).run();
-  let isNew = !!(created.meta && created.meta.changes);
-  if (!isNew) {
-    // the same tab back after more than an hour away is a new visit
-    const row = await DB.prepare('SELECT last_seen FROM live_sessions WHERE id = ?1').bind(m.id).first();
-    if (row && t - row.last_seen > 3600000) {
-      await DB.prepare(`UPDATE live_sessions SET first_seen = ?2, last_seen = ?2, place = ?3, source = ?4, device = ?5, country = ?6, city = ?7
-          WHERE id = ?1`).bind(m.id, t, place, source, device, country, city).run();
-      isNew = true;
-    }
-  }
-  if (isNew) {
-    // a new visit: count it for today (Israel date), by source and device and by place
-    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(t));
+
+  // a new tab, or the same tab back after more than an hour away, is a new visit
+  if (!row || t - row.last_seen > 3600000) {
+    const day = jerDay(t);
     await DB.batch([
+      row
+        ? DB.prepare(`UPDATE live_sessions SET first_seen = ?2, last_seen = ?2, place = ?3, source = ?4, device = ?5, country = ?6, city = ?7,
+              steps = ?8, exit_place = NULL WHERE id = ?1`).bind(m.id, t, place, source, device, country, city, incoming.join(','))
+        : DB.prepare(`INSERT INTO live_sessions (id, first_seen, last_seen, place, source, device, country, city, steps)
+              VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ON CONFLICT (id) DO NOTHING`).bind(m.id, t, place, source, device, country, city, incoming.join(',')),
       DB.prepare(`INSERT INTO site_visits_daily (date, source, device, visits) VALUES (?1, ?2, ?3, 1)
           ON CONFLICT (date, source, device) DO UPDATE SET visits = visits + 1`).bind(day, source, device || 'desktop'),
       DB.prepare(`INSERT INTO site_visits_geo (date, country, city, visits) VALUES (?1, ?2, ?3, 1)
           ON CONFLICT (date, country, city) DO UPDATE SET visits = visits + 1`).bind(day, country || '??', city || ''),
+      ...countSteps(day, incoming),
     ]);
   } else {
-    await DB.prepare('UPDATE live_sessions SET last_seen = ?2, place = ?3 WHERE id = ?1').bind(m.id, t, place).run();
+    const had = parseSteps(row.steps), added = incoming.filter((c) => !had.includes(c));
+    await DB.batch([
+      DB.prepare('UPDATE live_sessions SET last_seen = ?2, place = ?3, steps = ?4 WHERE id = ?1').bind(m.id, t, place, [...had, ...added].join(',')),
+      ...countSteps(jerDay(row.first_seen), added),
+    ]);
   }
   // kept for two days: the dashboard's "last 24 hours" view (and the 24 hours before it) reads them
   if (Math.random() < 0.02) await DB.prepare('DELETE FROM live_sessions WHERE last_seen < ?1').bind(t - 49 * 3600000).run();
@@ -266,6 +295,18 @@ async function database(env) {
         country    TEXT
       )`),
       env.DB.prepare(`CREATE INDEX IF NOT EXISTS live_sessions_seen ON live_sessions (last_seen)`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_steps_daily (
+        date   TEXT NOT NULL,
+        step   TEXT NOT NULL,
+        visits INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (date, step)
+      )`),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_exits_daily (
+        date   TEXT NOT NULL,
+        place  TEXT NOT NULL,
+        visits INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (date, place)
+      )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_visits_geo (
         date    TEXT NOT NULL,
         country TEXT NOT NULL,
@@ -285,7 +326,9 @@ async function database(env) {
       for (const col of ['meta TEXT', 'capi_sent_at TEXT', 'paypal_fee REAL', 'paypal_net REAL']) {
         await env.DB.prepare('ALTER TABLE orders ADD COLUMN ' + col).run().catch(() => {});
       }
-      await env.DB.prepare('ALTER TABLE live_sessions ADD COLUMN city TEXT').run().catch(() => {});
+      for (const col of ['city TEXT', 'steps TEXT', 'exit_place TEXT']) {
+        await env.DB.prepare('ALTER TABLE live_sessions ADD COLUMN ' + col).run().catch(() => {});
+      }
     }).catch(err => { schemaReady = null; throw err; });
   }
   await schemaReady;
