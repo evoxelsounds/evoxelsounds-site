@@ -162,8 +162,18 @@ const STEP_CODES = new Set(['s:services', 's:credits', 's:work', 's:about', 's:c
 const parseSteps = (v) => [...new Set(String(v || '').split(',').filter((c) => STEP_CODES.has(c)))];
 const jerDay = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(ms));
 
+/* Robots aren't visitors. Meta checks every ad link from its own network (AS32934 / AS63293, data
+   centres such as Prineville, Luleå, Clonee) with a real browser that runs the site, so it would
+   count as ad visits; people tapping an ad come from their own phone network, never from Meta's.
+   Browsers that say they are a bot or a headless browser are left out too. */
+const BOT_ASNS = new Set([32934, 63293]);
+// "bot" as its own word or before a slash (Googlebot/2.1), not inside a phone name like CUBOT
+const BOT_UA = /(?<![a-z])bot\b|bot\/|crawl|spider|slurp|facebookexternalhit|meta-external|headlesschrome|lighthouse/i;
+const isRobot = (request) => BOT_ASNS.has(Number(request.cf && request.cf.asn)) || BOT_UA.test(request.headers.get('User-Agent') || '');
+
 // keeps one anonymous row per open tab, with the path it took; a bad or odd signal is simply ignored
 async function recordLive(text, request, env) {
+  if (isRobot(request)) return;
   let m;
   try { m = JSON.parse(String(text).slice(0, 800)); } catch { return; }
   if (!m || !/^[A-Za-z0-9]{16,32}$/.test(m.id || '')) return;
