@@ -438,7 +438,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
   --border:rgba(230,180,120,.15); --border-2:rgba(230,180,120,.30);
 }
 .step-label{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:46px 0 16px}
-.pick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .pick{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:18px 14px;text-align:center;cursor:pointer;transition:border-color .3s var(--ease),transform .3s var(--ease),background .3s;font-family:var(--body);color:var(--text)}
 .pick:hover{transform:translateY(-3px);border-color:var(--border-2)}
 .pick.sel{border-color:var(--accent);background:linear-gradient(180deg,rgba(230,162,60,.12),var(--surface));box-shadow:0 14px 40px -22px var(--accent)}
@@ -694,6 +694,18 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
 .ck-steps li.done{color:var(--text-dim)}
 .ck-steps li.done .n{border-color:#7fd29a;color:#7fd29a}
 .ck-tag{display:inline-block;margin-top:10px;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-2);border:1px solid var(--border-2);border-radius:100px;padding:3px 9px}
+/* "Got a question?" — a free message instead of a booking */
+.pick.pick-q{border-style:dashed}
+.pick.pick-q.sel{border-style:solid}
+.q-panel .q-intro{color:var(--text-dim);margin:0 0 20px;font-size:.98rem;line-height:1.55;max-width:62ch}
+.q-panel .q-intro b{color:var(--text)}
+.q-perks{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:0;list-style:none}
+.q-perks li{font-size:.78rem;color:var(--text);border:1px solid var(--border-2);border-radius:100px;padding:6px 12px;background:var(--bg-2)}
+.q-perks li::before{content:"\2713  ";color:#7fd29a;font-weight:700}
+#view-hire .q-panel .field select{background:#f3eee3;color:#1d160c;border-color:rgba(230,162,60,.35)}
+.q-send{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px}
+.q-send .h-captcha{min-height:78px}
+.q-panel .ck-done{margin-top:6px}
 .ck-note{margin-top:22px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 12px 12px 0;padding:14px 16px;color:var(--text);font-size:.95rem}
 .ck-nav{display:flex;justify-content:space-between;gap:12px;margin-top:26px}
 #view-hire .field small{color:var(--text-mute);font-weight:500}
@@ -1107,6 +1119,30 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         <div class="pick-grid" id="pickGrid"></div>
         <div class="conf-flat" id="confPanel"></div>
         <p class="ck-note" id="ckProdNote" hidden>Music Production is arranged privately. Send a short request and we'll reply with the details, terms and price for your project. No payment is taken for this request.</p>
+        <div class="q-panel" id="qPanel" hidden>
+          <div class="step-label">Ask us anything</div>
+          <div id="qForm">
+            <div class="conf">
+              <p class="q-intro">Not sure which service fits, what it would cost for your project, or how it all works? <b>Send us a quick message</b> and one of our engineers will get back to you personally, usually within 24 hours.</p>
+              <ul class="q-perks"><li>No payment</li><li>No commitment</li><li>A real engineer replies</li></ul>
+              <div class="two-col">
+                <div class="field"><label for="q-name">Name</label><input id="q-name" type="text" autocomplete="name" placeholder="Your name"><span class="ck-err">Enter your name.</span></div>
+                <div class="field"><label for="q-email">Email</label><input id="q-email" type="email" autocomplete="email" placeholder="you@email.com"><span class="ck-err">Enter a valid email address.</span></div>
+              </div>
+              <div class="field"><label for="q-about">What is it about? <small>(optional)</small></label>
+                <select id="q-about"><option>Not sure yet</option><option>Mixing</option><option>Mastering</option><option>Music Production</option><option>Something else</option></select></div>
+              <div class="field"><label for="q-msg">Your question</label><textarea id="q-msg" placeholder="Tell us a bit about your track and what you would like to know."></textarea><span class="ck-err">Write your question.</span></div>
+              <div class="field" style="margin-bottom:0"><label for="q-link">Link to your track <small>(optional)</small></label><input id="q-link" type="url" inputmode="url" placeholder="https://soundcloud.com/… or https://www.dropbox.com/…"></div>
+            </div>
+            <div class="q-send">
+              <div class="h-captcha" data-captcha="true" data-theme="dark" data-lang="en"></div>
+              <button type="button" class="pill solid btn-lg" id="qSend">Send question</button>
+            </div>
+            <div class="ck-msg" id="qMsg" role="alert" hidden></div>
+            <p class="form-note legal-note">See how we handle your details in our <a href="privacy.html">Privacy Policy</a>.</p>
+          </div>
+          <div class="ck-done" id="qDone" tabindex="-1" hidden></div>
+        </div>
       </div>
 
       <!-- STEP 2 -->
@@ -1212,7 +1248,7 @@ footer{border-top:1px solid var(--border);padding:54px 0 38px}
         </div></div></div></div>
 
       <div class="fq"><button type="button" class="fq-head"><span class="fq-ico">?</span><span class="fq-t">Custom Inquiries</span><span class="fq-chev"></span></button><div class="fq-body"><div class="fq-iw"><div class="fa-body">
-          <p>Got a project with special requests — a specific number of tracks, a specific number of mixes, or anything else outside the ordinary — or a service that isn't listed under "Choose the service"? That gets a custom quote. <a href="#your-details" style="color:var(--accent);border-bottom:1px solid var(--accent)">Get in touch</a> and we'll work out the details with you.</p>
+          <p>Got a project with special requests — a specific number of tracks, a specific number of mixes, or anything else outside the ordinary — or a service that isn't listed under "Choose the service"? That gets a custom quote. <a href="#hire" data-service="question" style="color:var(--accent);border-bottom:1px solid var(--accent)">Send us a question</a> and we'll work out the details with you.</p>
         </div></div></div></div>
 
     </div>
@@ -1557,6 +1593,82 @@ document.querySelectorAll('#pickGrid .pick').forEach(p => {
   p.appendChild(t);
 });
 
+/* ---------- "Got a question?" — a free message, no booking and no payment ----------
+   A fourth card under the services. Choosing it hides the options, the steps and the
+   price bar, and shows a short form that is emailed through Web3Forms. */
+const qCard = document.createElement('button');
+qCard.type = 'button'; qCard.className = 'pick pick-q'; qCard.dataset.slug = 'question';
+qCard.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5"/><circle cx="12" cy="14.6" r=".4" fill="currentColor"/></svg>' +
+  '<div class="pn">Got a question?</div><div class="pd">Not sure yet? Ask us anything about your track</div><div class="ck-tag">Free</div>';
+pickGrid.appendChild(qCard);
+let qOpen = false;
+function qShow(on){
+  qOpen = on;
+  qCard.classList.toggle('sel', on);
+  ['confPanel','ckSteps','ckBar'].forEach(id => ck(id).hidden = on);
+  if (on) ck('ckProdNote').hidden = true;
+  ck('qPanel').hidden = !on;
+}
+function qSelect(){
+  document.querySelectorAll('#pickGrid .pick').forEach(p => p.classList.toggle('sel', p === qCard));
+  qShow(true);
+  ck('qForm').hidden = false; ck('qDone').hidden = true;
+  if (location.hash.startsWith('#hire') && !document.getElementById('view-hire').hidden) safeReplace('#hire?service=question');
+}
+qCard.addEventListener('click', () => {
+  qSelect();
+  if (window.evxSignal) evxSignal('QuestionOpen', { content_name: 'Question' });
+  ck('qPanel').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+});
+// the hCaptcha widget inside one part of the page (the booking step and the question form each have one)
+function captchaIn(box){ const t = box.querySelector('textarea[name="h-captcha-response"]'); return t ? t.value : ''; }
+function resetCaptchaIn(box){
+  try {
+    const f = box.querySelector('iframe[data-hcaptcha-widget-id]');
+    if (window.hcaptcha && f) window.hcaptcha.reset(f.getAttribute('data-hcaptcha-widget-id'));
+  } catch(e){}
+}
+['q-name','q-email','q-msg'].forEach(id => ck(id).addEventListener('input', () => ck(id).closest('.field').classList.remove('bad')));
+function qNote(text, kind){ const m = ck('qMsg'); m.hidden = !text; m.textContent = text || ''; m.className = 'ck-msg' + (kind ? ' ' + kind : ''); }
+ck('qSend').addEventListener('click', async () => {
+  const v = id => ck(id).value.trim();
+  let first = null;
+  const check = (id, good) => { ck(id).closest('.field').classList.toggle('bad', !good); if (!good && !first) first = ck(id); };
+  check('q-name', v('q-name').length > 1);
+  check('q-email', /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('q-email')));
+  check('q-msg', v('q-msg').length > 0);
+  if (first){ first.focus(); return; }
+  const token = captchaIn(ck('qPanel'));
+  if (!token){ qNote('Complete the "I am human" check, then press Send question.', 'bad'); return; }
+  const btn = ck('qSend'); btn.disabled = true; btn.textContent = 'Sending…'; qNote('');
+  try {
+    const fd = new FormData();
+    fd.append('access_key', CHECKOUT.web3formsKey);
+    fd.append('subject', 'Question from the website — ' + v('q-name') + ' (' + ck('q-about').value + ')');
+    fd.append('from_name', 'EVOXEL SOUNDS website');
+    fd.append('type', 'Question (no booking)');
+    fd.append('name', v('q-name')); fd.append('email', v('q-email')); fd.append('replyto', v('q-email'));
+    fd.append('about', ck('q-about').value);
+    fd.append('message', v('q-msg'));
+    fd.append('track_link', v('q-link') || '-');
+    fd.append('h-captcha-response', token);
+    const r = await fetch('https://api.web3forms.com/submit', { method:'POST', headers:{ Accept:'application/json' }, body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) throw new Error(j.message || 'send failed');
+    if (window.evxTrack) evxTrack('Contact', { content_name: 'Question', content_category: ck('q-about').value });
+    if (window.evxSignal) evxSignal('QuestionSent', { content_name: 'Question' });
+    const firstName = escH(v('q-name').split(' ')[0]);
+    ck('qDone').innerHTML = '<div class="ck-ic">✓</div><h3>Question sent</h3><p>Thanks, ' + firstName + '. Your message is with us, and one of our engineers will reply to ' + escH(v('q-email')) + ', usually within 24 hours.</p>' +
+      '<p style="margin-top:14px">In the meantime, <a href="#" data-nav="home" data-target="#work">hear the before &amp; after</a> of tracks we worked on.</p>';
+    ck('qForm').hidden = true; ck('qDone').hidden = false; ck('qDone').focus();
+    ['q-name','q-email','q-msg','q-link'].forEach(id => ck(id).value = '');
+  } catch(e){
+    qNote('Your question could not be sent. Please complete the "I am human" check again and retry, or email evoxelsounds@gmail.com.', 'bad');
+    resetCaptchaIn(ck('qPanel'));
+  }
+  btn.disabled = false; btn.textContent = 'Send question';
+});
+
 function ckChosen(){ return [...confPanel.querySelectorAll('input:checked')].map(i => ({ label: i.dataset.label, price: +i.dataset.price })); }
 function ckTotal(){ return SERVICES[current].base + ckChosen().reduce((a, c) => a + c.price, 0); }
 
@@ -1573,7 +1685,7 @@ function ckSyncPath(){
     : 'Share a Dropbox folder with your stems, or a private SoundCloud link. Make sure anyone with the link can open it.';
 }
 const _select = select;
-select = function(slug){ _select(slug); ckSyncPath(); ckTrackView(); };
+select = function(slug){ if (qOpen) qShow(false); _select(slug); ckSyncPath(); ckTrackView(); };
 
 /* ---------- Meta Pixel: steps of the booking funnel ----------
    ViewContent      a service is shown on the booking page
@@ -1765,7 +1877,7 @@ async function ckNewRef(kind){
   return ckFallbackRef(prefix);
 }
 
-function ckResetCaptcha(){ try { window.hcaptcha && window.hcaptcha.reset(); } catch(e){} ckGate(); }
+function ckResetCaptcha(){ resetCaptchaIn(ck('ck3')); ckGate(); }
 
 /* ---------- request path (Music Production, or no payment server yet) ---------- */
 ck('ckReqBtn').addEventListener('click', async () => {
@@ -1995,11 +2107,13 @@ function showView(v){ vHome.hidden = v !== 'home'; vHire.hidden = v !== 'hire'; 
 function go(view, opts = {}){
   if (busy) return;
   if (view === curView){
+    if (view === 'hire' && opts.service === 'question'){ qSelect(); ck('qPanel').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
     if (opts.target){ const el = document.querySelector(opts.target); if (el) el.scrollIntoView({behavior:'smooth'}); }
     return;
   }
   busy = true;
   if (view === 'hire' && opts.service && SERVICES[opts.service]) select(opts.service);
+  else if (view === 'hire' && opts.service === 'question') qSelect();
   if (curView === 'home') homeScroll = scrollY;
   const doSwap = () => {
     try {
@@ -2045,6 +2159,7 @@ if (location.hash.startsWith('#hire')){
   const p = new URLSearchParams((location.hash.split('?')[1]) || '');
   const s = p.get('service');
   if (s && SERVICES[s]) select(s);
+  else if (s === 'question') qSelect();
   showView('hire');
   scrollTo(0,0);
 }
