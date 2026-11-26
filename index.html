@@ -2164,9 +2164,12 @@ if (location.hash.startsWith('#hire')){
   scrollTo(0,0);
 }
 
-// deep link: before & after ads land on #work, straight on the player (not the Portfolio heading above it).
+// deep link: before & after ads (?seen=<track>, or #work) land straight on the player, not the Portfolio heading above it.
 // Scrolls once now and again when images finish loading, unless the visitor has already scrolled on their own.
-if (location.hash === '#work'){
+// The ad link carries no #fragment, so Meta's URL parameters and fbclid always stay in the query string.
+let fromBA = false;
+try { fromBA = new URLSearchParams(location.search).has('seen'); } catch(e){}
+if ((fromBA || location.hash === '#work') && !location.hash.startsWith('#hire')){
   let landedAt = -1;
   const toPlayer = () => {
     const el = document.querySelector('#work .abp'); if (!el) return;
@@ -2526,7 +2529,7 @@ document.querySelector('.abp-player').addEventListener('keydown', e => {
 window.addEventListener('resize', () => draw(bufA ? position() : 0));
 
 /* decoding needs an AudioContext; browsers allow creating one before a click, they only keep it silent until then */
-/* Before & after ads link to ?seen=<track>#work. The visitor already heard that track in the ad,
+/* Before & after ads link to ?seen=<track>. The visitor already heard that track in the ad,
    so the player opens on a different one (the first in the list that isn't it). */
 const slugOf = t => (t.before || '').replace(/^audio\//, '').replace(/-before\.\w+$/, '');
 let seen = '';
