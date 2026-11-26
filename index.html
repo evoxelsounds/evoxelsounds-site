@@ -2164,6 +2164,19 @@ if (location.hash.startsWith('#hire')){
   scrollTo(0,0);
 }
 
+// deep link: before & after ads land on #work, straight on the player (not the Portfolio heading above it).
+// Scrolls once now and again when images finish loading, unless the visitor has already scrolled on their own.
+if (location.hash === '#work'){
+  let landedAt = -1;
+  const toPlayer = () => {
+    const el = document.querySelector('#work .abp'); if (!el) return;
+    instantScroll(el.getBoundingClientRect().top + window.pageYOffset - 88);
+    landedAt = window.pageYOffset;
+  };
+  toPlayer();
+  addEventListener('load', () => { if (Math.abs(window.pageYOffset - landedAt) < 4) toPlayer(); }, { once:true });
+}
+
 </script>
 <script src="https://web3forms.com/client/script.js" async defer></script>
 <script>
@@ -2513,7 +2526,12 @@ document.querySelector('.abp-player').addEventListener('keydown', e => {
 window.addEventListener('resize', () => draw(bufA ? position() : 0));
 
 /* decoding needs an AudioContext; browsers allow creating one before a click, they only keep it silent until then */
-current = TRACKS.findIndex(t => t.before);
+/* Before & after ads link to ?seen=<track>#work. The visitor already heard that track in the ad,
+   so the player opens on a different one (the first in the list that isn't it). */
+const slugOf = t => (t.before || '').replace(/^audio\//, '').replace(/-before\.\w+$/, '');
+let seen = '';
+try { seen = (new URLSearchParams(location.search).get('seen') || '').toLowerCase(); } catch(e){}
+current = TRACKS.findIndex(t => t.before && slugOf(t) !== seen);
 syncHeader(current);
 const io = new IntersectionObserver(es => {
   if (es.some(e => e.isIntersecting)){ io.disconnect(); if (loadedIdx < 0 && !loading) loadTrack(current); }
